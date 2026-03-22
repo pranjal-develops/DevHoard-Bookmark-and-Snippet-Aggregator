@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: devHoard
+  datasource:
+    url: jdbc:postgresql://localhost:5432/devhoard
+    username: ${PG_USERNAME:postgres}
+    password: ${PG_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
