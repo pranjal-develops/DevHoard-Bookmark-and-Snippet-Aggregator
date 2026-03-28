@@ -8,5 +8,8 @@ import java.util.List;
 public interface BookmarkRepo extends JpaRepository<Bookmark, Long> {
 
     List<Bookmark> findByTitleContainingIgnoreCase(String keyword);
+    List<Bookmark> findByCategory (String category);
+    List<Bookmark> findByIsFavoriteTrue();
+
 
 }

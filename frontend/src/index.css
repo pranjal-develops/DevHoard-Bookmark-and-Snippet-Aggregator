@@ -1,1 +1,14 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* 🧬 Professional Cyberpunk Grid Background */
+@layer base {
+    .dark body {
+        background-image: radial-gradient(circle at 1px 1px, rgba(132, 204, 22, 0.05) 1px, transparent 0);
+        background-size: 40px 40px;
+    }
+}
