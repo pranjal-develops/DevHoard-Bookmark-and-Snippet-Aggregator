@@ -6,9 +6,10 @@ interface SearchProps {
     isSubmitting: boolean;
     selectedCategory: string | null;
     favoritesOnly: boolean;
+    refreshSignal: boolean;
 }
 
-const Search: React.FC<SearchProps> = ({ setBookmarks, isSubmitting, selectedCategory, favoritesOnly }) => {
+const Search: React.FC<SearchProps> = ({ setBookmarks, isSubmitting, selectedCategory, favoritesOnly, refreshSignal }) => {
 
     const [searchText, setSearchText] = useState<string>("");
 
@@ -29,7 +30,7 @@ const Search: React.FC<SearchProps> = ({ setBookmarks, isSubmitting, selectedCat
             }
         }
         fetchData();
-    }, [searchText, isSubmitting, selectedCategory, favoritesOnly])
+    }, [searchText, isSubmitting, selectedCategory, favoritesOnly, refreshSignal])
 
     return (
         <input

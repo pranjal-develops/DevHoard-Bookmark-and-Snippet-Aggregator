@@ -8,6 +8,7 @@ interface Bookmark {
     imgUrl: string;
     originalUrl: string;
     category: string;
+    isFavorite: boolean;
 }
 
 interface NavbarProps {
@@ -18,10 +19,11 @@ interface NavbarProps {
     toggleSidebar: () => void;
     selectedCategory: string | null;
     favoritesOnly: boolean;
+    refreshSignal: boolean;
     // setFavoritesOnly: (value: boolean) => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ isDark, setIsDark, setBookmarks, isSubmitting, toggleSidebar, selectedCategory, favoritesOnly }) => {
+const Navbar: React.FC<NavbarProps> = ({ isDark, setIsDark, setBookmarks, isSubmitting, toggleSidebar, selectedCategory, favoritesOnly, refreshSignal }) => {
     const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
 
     return (
@@ -50,6 +52,7 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, setIsDark, setBookmarks, isSubm
                         isSubmitting={isSubmitting}
                         selectedCategory={selectedCategory}
                         favoritesOnly={favoritesOnly}
+                        refreshSignal={refreshSignal}
                     />
 
                 </div>
@@ -86,7 +89,11 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, setIsDark, setBookmarks, isSubm
             {/* Mobile Search Overlay */}
             {isMobileSearchOpen && (
                 <div className="sm:hidden w-full px-4 py-3 bg-white/95 dark:bg-black/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 animate-in slide-in-from-top duration-300">
-                    <Search setBookmarks={setBookmarks} isSubmitting={isSubmitting} />
+                    <Search setBookmarks={setBookmarks}
+                        isSubmitting={isSubmitting}
+                        selectedCategory={selectedCategory}
+                        favoritesOnly={favoritesOnly}
+                        refreshSignal={refreshSignal} />
                 </div>
             )}
         </header>

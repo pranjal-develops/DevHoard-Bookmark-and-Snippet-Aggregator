@@ -5,6 +5,7 @@ import Card from '../components/Card';
 import axios from 'axios';
 import Search from '../components/Search';
 import Navbar from '../components/Navbar';
+import Toast from '../components/Toast';
 
 
 interface Bookmark {
@@ -23,12 +24,13 @@ export default function App() {
     const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
-  typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true
-);
-
+        typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true
+    );
+    const [showToast, setShowToast] = useState(false);
     const [category, setCategory] = useState<string>("");
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [favoritesOnly, setFavoritesOnly] = useState(false);
+    const [refreshSignal, setRefreshSignal] = useState(false);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -36,6 +38,17 @@ export default function App() {
         setIsSubmitting(true);
         try {
             await axios.post("http://localhost:8080/api/bookmarks", { url, category });
+            setShowToast(true);
+
+            setTimeout(() => {
+                setRefreshSignal(val => !val);
+            }, 3000);
+
+            setTimeout(() => {
+                setShowToast(false);
+                setRefreshSignal(val => !val);;
+            }, 10000);
+
             setUrl("");
             setCategory("");
             // window.location.reload();
@@ -57,6 +70,7 @@ export default function App() {
                 toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                 selectedCategory={selectedCategory}
                 favoritesOnly={favoritesOnly}
+                refreshSignal={refreshSignal}
             />
             <div className="flex h-full bg-zinc-50 text-zinc-900 transition-colors duration-300 dark:bg-[hsl(0,0%,3%)] dark:text-zinc-100">
 
@@ -95,6 +109,9 @@ export default function App() {
                     </div>
                 </main>
             </div>
+            {showToast && (
+                <Toast />
+            )}
         </div>
     );
 }

@@ -64,7 +64,7 @@ const Card = ({ bookmark, setBookmarks }: CardProps) => {
         <img
           // src={bookmark.imgUrl || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400'}
           src={bookmark.imgUrl}
-          alt="DEVHOARD"
+          alt={bookmark.title}
           className="w-full h-full object-cover grayscale-20 group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700 opacity-80 group-hover:opacity-100"
         />
         {/* Neon HUD Overlay */}

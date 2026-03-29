@@ -24,12 +24,12 @@ public class BookmarkController {
 //        String url = payload.get("url");
 //        return bookmarkService.scrapeAndSave(url);
 //    }
-    public Bookmark saveBookmark(@RequestBody Map<String ,String> payload){
+    public void saveBookmark(@RequestBody Map<String ,String> payload){
         try {
             String url = payload.get("url");
             String category = payload.getOrDefault("category", "Uncategorized");
             if(category == null || category.isBlank()) category = "Uncategorized";
-            return bookmarkService.scrapeAndSave(url, category);
+            bookmarkService.scrapeAndSave(url, category);
         }   catch (Exception e)  {
             throw new RuntimeException("An error has occurred:", e);
         }
