@@ -21,8 +21,11 @@ export default function App() {
     const [url, setUrl] = useState('');
     const [isDark, setIsDark] = useState<boolean>(true);
     const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
+  typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true
+);
+
     const [category, setCategory] = useState<string>("");
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [favoritesOnly, setFavoritesOnly] = useState(false);
