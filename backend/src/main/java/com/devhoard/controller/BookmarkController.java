@@ -1,15 +1,16 @@
 package com.devhoard.controller;
 
+import com.devhoard.DTO.BookmarkRequest;
 import com.devhoard.entities.Bookmark;
 import com.devhoard.service.BookmarkService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.awt.print.Book;
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/bookmarks")
@@ -24,12 +25,12 @@ public class BookmarkController {
 //        String url = payload.get("url");
 //        return bookmarkService.scrapeAndSave(url);
 //    }
-    public void saveBookmark(@RequestBody Map<String ,String> payload){
+    public void saveBookmark(@Valid @RequestBody BookmarkRequest payload){
         try {
-            String url = payload.get("url");
-            String category = payload.getOrDefault("category", "Uncategorized");
-            if(category == null || category.isBlank()) category = "Uncategorized";
-            bookmarkService.scrapeAndSave(url, category);
+            String url = payload.getUrl();
+            Set<String> categories = payload.getCategories();
+            if(categories == null || categories.isEmpty()) categories = new HashSet<>(Collections.singletonList("Uncategorized"));
+            bookmarkService.scrapeAndSave(url, categories);
         }   catch (Exception e)  {
             throw new RuntimeException("An error has occurred:", e);
         }
@@ -51,9 +52,9 @@ public class BookmarkController {
     }
 
     @PatchMapping("/{id}/category")
-    public Bookmark updateCategory(@PathVariable Long id, @RequestBody Map<String, String> payload) {
-        String newCategory = payload.get("category");
-        return bookmarkService.updateCategory(id, newCategory);
+    public Bookmark updateCategory(@PathVariable Long id,@Valid @RequestBody BookmarkRequest payload) {
+        Set<String> newCategories = payload.getCategories();
+        return bookmarkService.updateCategory(id, newCategories);
     }
 
     @PatchMapping("/{id}/favorite")

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 
 import java.time.ZonedDateTime;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -22,7 +23,9 @@ public class Bookmark {
     @Column(name = "description", nullable = true,length = 512)
     private String description;
     private String imgUrl;
-    private String category;
+    @ElementCollection
+    @CollectionTable //This tells JPA to create a separate table behind the scenes to keep track of all the tags without us needing to do it manually!
+    private Set<String> categories;
     @JsonProperty("isFavorite")
     private boolean isFavorite = false;
     @CreationTimestamp
@@ -33,17 +36,17 @@ public class Bookmark {
         this.title = title;
         this.description = description;
         this.imgUrl = imgUrl;
-        this.category = null;
+        this.categories = null;
         this.createdAt = ZonedDateTime.now();
         this.isFavorite = false;
     }
 
-    public Bookmark(String originalUrl, String title, String description, String imgUrl, String category){
+    public Bookmark(String originalUrl, String title, String description, String imgUrl, Set<String> categories){
         this.originalUrl = originalUrl;
         this.title = title;
         this.description = description;
         this.imgUrl = imgUrl;
-        this.category = category;
+        this.categories = categories;
         this.createdAt = ZonedDateTime.now();
         this.isFavorite = false;
     }

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import React from 'react'
+import Tag from './Tag';
 
 interface Bookmark {
   id: string;
@@ -62,8 +63,7 @@ const Card = ({ bookmark, setBookmarks }: CardProps) => {
       {/* --- Image Layer with Scanning Glow --- */}
       <div className="h-44 relative bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-900 overflow-hidden">
         <img
-          // src={bookmark.imgUrl || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400'}
-          src={bookmark.imgUrl}
+          src={bookmark.imgUrl || "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=400"}
           alt={bookmark.title}
           className="w-full h-full object-cover grayscale-20 group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700 opacity-80 group-hover:opacity-100"
         />
@@ -119,7 +119,7 @@ const Card = ({ bookmark, setBookmarks }: CardProps) => {
               {bookmark.originalUrl?.replace(/^https?:\/\//, '')}
             </div>
           </div>
-
+          <Tag />
           {/* Cyberpunk Trash Icon (Only visible on hover) */}
           <button
             onClick={(e) => { e.stopPropagation(); handleDelete(bookmark.id); }}

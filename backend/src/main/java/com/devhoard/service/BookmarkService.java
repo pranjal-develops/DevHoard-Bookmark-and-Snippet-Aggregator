@@ -19,6 +19,7 @@ import java.time.Duration;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -27,8 +28,14 @@ public class BookmarkService {
     private final BookmarkRepo bookmarkRepo;
 
     @Async
-    public void scrapeAndSave(String url, String category) {
+    public void scrapeAndSave(String url, Set<String> categories) {
         Document document = null;
+        // Use Old Reddit for scraping (it has better metadata for bots)
+        String scrapeUrl = url;
+        if (url.contains("reddit.com") && !url.contains("old.reddit.com")) {
+            scrapeUrl = url.replace("www.reddit.com", "old.reddit.com");
+        }
+
         try {
             //Some Sites like StackOverflow will block this as when JSoup makes an HTTP request to StackOverflow, it sends a secret header identifying itself as "Java/17.0.x".
             //StackOverflow's firewall immediately sees that you are a bot, not a human, and blocks your request with a 403 Forbidden status. Because JSoup crashes on a 403, your try/catch block catches the crash, throws your custom RuntimeException, and the entity is never saved.
@@ -40,20 +47,26 @@ public class BookmarkService {
 //                    .referrer("http://www.google.com")
 //                    .get();
             try{
-                document = Jsoup.connect(url)
+                document = Jsoup.connect(scrapeUrl)
                         .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                         .header("Accept-Language", "en-US,en;q=0.9")
                         .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
                         .referrer("https://www.google.com")
                         .get();
             } catch (IOException e) {
-                    document = scrapeWithSelenium(url);
+                    document = scrapeWithSelenium(scrapeUrl);
             }
             if (document == null) throw new Exception("Failed to Scrape");
+            String imgUrl = firstNonEmpty(document, "meta[property=og:image:url]","meta[property=og:image]","meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]");
+
+            if(imgUrl==null || imgUrl.isEmpty()){
+                document = scrapeWithSelenium(scrapeUrl);
+                imgUrl = firstNonEmpty(document, "meta[property=og:image:url]","meta[property=og:image]","meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]");
+            }
+
             String title = document.title();
-            String description = document.select("meta[name=description]").attr("content");
-            String imgUrl = firstNonEmpty(document, "meta[property=og:image]","meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]","link[rel=apple-touch-icon]");
-            Bookmark bookmark = new Bookmark(url, title, description, imgUrl, category);
+            String description = firstNonEmpty(document, "meta[name=description]", "meta[property=og:description]");
+            Bookmark bookmark = new Bookmark(url, title, description, imgUrl, categories);
             bookmarkRepo.save(bookmark);
         } catch (Exception e) {
             throw new RuntimeException("An error occurred while saving the entity",e);
@@ -72,12 +85,12 @@ public class BookmarkService {
         return bookmarkRepo.findAll();
     }
 
-    public List<Bookmark> getByCategory (String category){ return bookmarkRepo.findByCategory(category);}
+    public List<Bookmark> getByCategory (String category){ return bookmarkRepo.findByCategoriesContaining(category);}
 
-    public Bookmark updateCategory(Long id, String category) {
+    public Bookmark updateCategory(Long id, Set<String> categories) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
-        bookmark.setCategory(category);
+        bookmark.setCategories(categories);
         return bookmarkRepo.save(bookmark);
     }
 
@@ -93,13 +106,51 @@ public class BookmarkService {
         return bookmarkRepo.findByIsFavoriteTrue();
     }
 
+//    private static String firstNonEmpty(Document doc, String... cssQueries) {
+//        for (String q : cssQueries) {
+//            String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
+//            if (v != null && !v.isEmpty()) return v;
+//        }
+//        return "";
+//    }
+
     private static String firstNonEmpty(Document doc, String... cssQueries) {
+        // Stage 1: Check your specific high-quality queries (og:image, etc.)
         for (String q : cssQueries) {
             String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
-            if (v != null && !v.isEmpty()) return v;
+            if (isValidImage(v)) return v; // ✅ NEW: Use a helper to check quality!
         }
+
+        // Stage 2: The Shotgun meta-scan (Now with a "Hiring" filter!)
+        for (org.jsoup.nodes.Element meta : doc.select("meta")) {
+            String property = meta.attr("property").toLowerCase();
+            String name = meta.attr("name").toLowerCase();
+
+            // 🕵️‍♂️ ONLY look at tags that mention "image" or "thumbnail"
+            if (property.contains("image") || name.contains("image") ||
+                    property.contains("thumbnail") || name.contains("thumbnail")) {
+
+                String v = meta.attr("abs:content");
+                if (isValidImage(v)) return v;
+            }
+        }
+
+
         return "";
     }
+
+    // 🛡️ THE QUALITY GUARD:
+    private static boolean isValidImage(String url) {
+        if (url == null || url.isEmpty()) return false;
+        String lower = url.toLowerCase();
+
+        //  THE WALL: If it contains any of these words, it's trash!
+        return !(lower.contains("icon") || lower.contains("favicon") ||
+                lower.contains("logo") || lower.contains("76x76") ||
+                lower.contains("px-"));
+    }
+
+
 
     private Document scrapeWithSelenium(String url) {
         // 1. Setup the invisible Chrome driver
@@ -113,10 +164,10 @@ public class BookmarkService {
         options.setExperimentalOption("useAutomationExtension", false);
         options.addArguments("--disable-gpu");
         options.addArguments("--no-sandbox");
-        options.addArguments("--blink-settings=imagesEnabled=false");
+        options.addArguments("--blink-settings=imagesEnabled=true");
         options.addArguments("--incognito");
         // ⚡ THE EAGER STRATEGY: Stop waiting once the basic HTML is loaded!
-        options.setPageLoadStrategy(PageLoadStrategy.EAGER);
+//        options.setPageLoadStrategy(PageLoadStrategy.EAGER);
 
 
         WebDriver driver = new ChromeDriver(options);
@@ -127,12 +178,14 @@ public class BookmarkService {
 
             // Wait up to 20 seconds, but continue the INSTANT the title is no longer "Just a moment"
             new WebDriverWait(driver, Duration.ofSeconds(20))
-                    .until(ExpectedConditions.not(ExpectedConditions.titleContains("Just a moment")));
+//                    .until(ExpectedConditions.not(ExpectedConditions.titleContains("Just a moment")));
+                    .until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.tagName("body")));
 
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
 
             // 3. Extract the final rendered HTML and convert it back to a JSoup Document
             String html = driver.getPageSource();
-            return Jsoup.parse(html);
+            return Jsoup.parse(html, url);
         } finally {
             // 4. CRITICAL: Always close the browser or your RAM will fill up!
             driver.quit();
