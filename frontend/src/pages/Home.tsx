@@ -14,7 +14,7 @@ interface Bookmark {
     description: string;
     imgUrl: string;
     originalUrl: string;
-    category: string;
+    categories: string[];
     isFavorite: boolean;
 }
 
@@ -57,6 +57,10 @@ export default function App() {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleTagClick = (tagName: string) => {
+        setSelectedCategory(tagName);
     };
 
 
@@ -103,7 +107,7 @@ export default function App() {
                         {/* Results Grid */}
                         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {bookmarks.map((b: Bookmark) => (
-                                <Card key={b.id} bookmark={b} setBookmarks={setBookmarks} />
+                                <Card key={b.id} bookmark={b} setBookmarks={setBookmarks} onTagClick={handleTagClick} />
                             ))}
                         </div>
                     </div>

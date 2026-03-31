@@ -8,18 +8,19 @@ interface Bookmark {
   description: string;
   imgUrl: string;
   originalUrl: string;
-  category: string;
+  categories: string[];
   isFavorite: boolean;
 }
 
 interface CardProps {
   bookmark: Bookmark;
   setBookmarks: (value: React.SetStateAction<Bookmark[]>) => void;
+  onTagClick: (tagName: string) => void;
 }
 
 
 
-const Card = ({ bookmark, setBookmarks }: CardProps) => {
+const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
 
   const handleDelete = async (id: string) => {
     try {
@@ -41,12 +42,12 @@ const Card = ({ bookmark, setBookmarks }: CardProps) => {
 
 
   const [isEditing, setIsEditing] = React.useState(false);
-  const [newCategory, setNewCategory] = React.useState(bookmark.category || "");
+  const [newCategory, setNewCategory] = React.useState<string>(bookmark.categories?.join(', ') || "");  //.join(', ') takes all the separate words in the array and glues them together into one string: "Java, Spring"
 
   const handleUpdateCategory = async () => {
     try {
       const response = await axios.patch(`http://localhost:8080/api/bookmarks/${bookmark.id}/category`, {
-        category: newCategory
+        categories: newCategory.split(',').map(tag => tag.trim())
       });
       // Update the list so the UI reflects the change
       setBookmarks(prev => prev.map(b => b.id === bookmark.id ? response.data : b));
@@ -91,12 +92,18 @@ const Card = ({ bookmark, setBookmarks }: CardProps) => {
                   onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory()}
                 />
               ) : (
-                <span
-                  onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-                  className="text-[9px] font-mono px-2 py-0.5 rounded-sm bg-lime-500/10 text-lime-500 border border-lime-500/20 uppercase tracking-tighter cursor-edit hover:bg-lime-500/20 transition-all"
-                >
-                  {bookmark.category || "UNCATEGORIZED"}
-                </span>
+                // <span
+                //   onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+                //   className="text-[9px] font-mono px-2 py-0.5 rounded-sm bg-lime-500/10 text-lime-500 border border-lime-500/20 uppercase tracking-tighter cursor-edit hover:bg-lime-500/20 transition-all"
+                // >
+                //   {bookmark.category || "UNCATEGORIZED"}
+                // </span>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {bookmark.categories?.map(tag => (
+                    <Tag key={tag} name={tag} onClick={() => onTagClick(tag)} />
+                  ))}
+                </div>
+
               )}
             </div>
 

@@ -7,7 +7,7 @@ interface Bookmark {
     description: string;
     imgUrl: string;
     originalUrl: string;
-    category: string;
+    categories: string[];
     isFavorite: boolean;
 }
 
