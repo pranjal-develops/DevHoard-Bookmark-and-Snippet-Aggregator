@@ -11,7 +11,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, bookmarks, selectedCategory, setSelectedCategory, favoritesOnly, setFavoritesOnly }) => {
 
-    const categories = Array.from(new Set(bookmarks.map(b => b.category).filter(Boolean)));
+    const categories = Array.from(new Set(bookmarks.flatMap(b => b.categories || [])));
 
     return (
         <>

@@ -1,6 +1,6 @@
 import axios from 'axios';
-import React from 'react'
-import Tag from './Tag';
+import React, { useState } from 'react'
+import TagInput from './TagInput';
 
 interface Bookmark {
   id: string;
@@ -42,6 +42,7 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
 
 
   const [isEditing, setIsEditing] = React.useState(false);
+  const [tags, setTags] = useState(bookmark.categories || []);
   const [newCategory, setNewCategory] = React.useState<string>(bookmark.categories?.join(', ') || "");  //.join(', ') takes all the separate words in the array and glues them together into one string: "Java, Spring"
 
   const handleUpdateCategory = async () => {
@@ -79,40 +80,41 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
 
       {/* --- Data Layer --- */}
       <div className="p-5">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex items-center gap-2 mb-2">
-              {isEditing ? (
-                <input
-                  autoFocus
-                  className="text-[9px] font-mono px-2 py-0.5 rounded-sm bg-zinc-900 text-lime-400 border border-lime-500/50 outline-none w-24"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  onBlur={handleUpdateCategory}
-                  onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory()}
-                />
-              ) : (
-                // <span
-                //   onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-                //   className="text-[9px] font-mono px-2 py-0.5 rounded-sm bg-lime-500/10 text-lime-500 border border-lime-500/20 uppercase tracking-tighter cursor-edit hover:bg-lime-500/20 transition-all"
-                // >
-                //   {bookmark.category || "UNCATEGORIZED"}
-                // </span>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {bookmark.categories?.map(tag => (
-                    <Tag key={tag} name={tag} onClick={() => onTagClick(tag)} />
-                  ))}
-                </div>
-
-              )}
-            </div>
-
+        {/* 🏷️ THE TAG HUD */}
+        <div className="flex items-center justify-between mb-3 min-h-[24px]">
+          <div className="flex flex-wrap gap-1.5">
+            <TagInput tags={tags} setTags={setTags} placeHolder='ADD_TAGS' inForm={false} />
           </div>
 
-          <h3 className="font-bold text-sm leading-snug line-clamp-2 text-zinc-900 dark:text-zinc-100 group-hover:text-lime-500 transition-colors">
-            {bookmark.title || "UNTITLED_NODE"}
-          </h3>
+          {/* ⚙️ THE EDIT TRIGGER */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsEditing(!isEditing); }}
+            className="text-zinc-500 hover:text-lime-500 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
         </div>
+
+        {/* 📝 THE EDIT INPUT (Shows only when isEditing is true) */}
+        {isEditing && (
+          <div className="mb-3 animate-in fade-in slide-in-from-top-1 duration-300">
+            <input
+              autoFocus
+              className="w-full text-[10px] font-mono px-2 py-1.5 rounded-sm bg-zinc-900 text-lime-400 border border-lime-500/50 outline-none"
+              placeholder="ENTER_TAGS (e.g. Java, AI, News)"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onBlur={handleUpdateCategory}
+              onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory()}
+            />
+          </div>
+        )}
+
+        <h3 className="font-bold text-sm leading-snug line-clamp-2 text-zinc-900 dark:text-zinc-100 group-hover:text-lime-500 transition-colors">
+          {bookmark.title || "UNTITLED_NODE"}
+        </h3>
+        ...
+
 
         <p className="text-zinc-500 dark:text-zinc-500 text-[11px] leading-relaxed line-clamp-2 mb-6 h-8">
           {bookmark.description || "System encountered zero metadata description for this memory fragment."}
@@ -126,7 +128,6 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
               {bookmark.originalUrl?.replace(/^https?:\/\//, '')}
             </div>
           </div>
-          <Tag />
           {/* Cyberpunk Trash Icon (Only visible on hover) */}
           <button
             onClick={(e) => { e.stopPropagation(); handleDelete(bookmark.id); }}

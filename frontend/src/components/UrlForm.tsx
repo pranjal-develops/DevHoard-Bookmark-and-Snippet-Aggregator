@@ -1,17 +1,18 @@
 import React from 'react'
+import TagInput from './TagInput';
 
 interface UrlFormProps {
     url: string;
-    category: string;
+    categories: string[];
     setUrl: (url: string) => void;
-    setCategory: (category: string) => void;
+    setCategories: (categories: string[]) => void;
     handleSubmit: (e: React.FormEvent) => void;
     isSubmitting: boolean;
 }
 
 
 {/* The URL Form */ }
-const UrlForm = ({ url, setUrl, handleSubmit, isSubmitting, category, setCategory }: UrlFormProps) => {
+const UrlForm = ({ url, setUrl, handleSubmit, isSubmitting, categories, setCategories }: UrlFormProps) => {
     return (
         <form onSubmit={handleSubmit} className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 mb-12">
             <input
@@ -22,13 +23,7 @@ const UrlForm = ({ url, setUrl, handleSubmit, isSubmitting, category, setCategor
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
             />
-            <input
-                type="text"
-                placeholder="Category (e.g. AI, Docs, Dev)"
-                className="px-5 py-4 rounded-xl bg-white dark:bg-[hsl(0,0%,10%)] border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-4 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-sm"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-            />
+            <TagInput tags={categories} setTags={setCategories} placeHolder="Category (e.g. AI, Docs, Dev)" inForm={true} />
 
             {
                 isSubmitting ? (

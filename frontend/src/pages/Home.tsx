@@ -27,7 +27,7 @@ export default function App() {
         typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true
     );
     const [showToast, setShowToast] = useState(false);
-    const [category, setCategory] = useState<string>("");
+    const [categories, setCategories] = useState<string[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [favoritesOnly, setFavoritesOnly] = useState(false);
     const [refreshSignal, setRefreshSignal] = useState(false);
@@ -37,7 +37,7 @@ export default function App() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            await axios.post("http://localhost:8080/api/bookmarks", { url, category });
+            await axios.post("http://localhost:8080/api/bookmarks", { url, categories });
             setShowToast(true);
 
             setTimeout(() => {
@@ -50,7 +50,7 @@ export default function App() {
             }, 10000);
 
             setUrl("");
-            setCategory("");
+            setCategories([]);
             // window.location.reload();
         } catch (error) {
             console.log("Error saving bookmark", error);
@@ -102,7 +102,7 @@ export default function App() {
                             </div>
                         </div>
 
-                        <UrlForm url={url} setUrl={setUrl} handleSubmit={handleSubmit} isSubmitting={isSubmitting} category={category} setCategory={setCategory} />
+                        <UrlForm url={url} setUrl={setUrl} handleSubmit={handleSubmit} isSubmitting={isSubmitting} categories={categories} setCategories={setCategories} />
 
                         {/* Results Grid */}
                         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
