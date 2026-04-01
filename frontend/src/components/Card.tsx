@@ -1,5 +1,5 @@
 import axios from 'axios';
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import TagInput from './TagInput';
 
 interface Bookmark {
@@ -22,6 +22,8 @@ interface CardProps {
 
 const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
 
+  const [tags, setTags] = useState(bookmark.categories || []);
+
   const handleDelete = async (id: string) => {
     try {
       await axios.delete(`http://localhost:8080/api/bookmarks/${id}`);
@@ -41,8 +43,23 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
   };
 
 
+  useEffect(() => {
+    const saveTags = async () => {
+      try {
+        await axios.patch(`http://localhost:8080/api/bookmarks/${bookmark.id}/category`, {
+          categories: tags
+        })
+        // setBookmarks(prev => prev.map(b => b.id === bookmark.id ? response.data : b));
+      }
+      catch (e) {
+        console.log("Error saving tags", e);
+      }
+    }
+    saveTags();
+  }, [tags])
+
+
   const [isEditing, setIsEditing] = React.useState(false);
-  const [tags, setTags] = useState(bookmark.categories || []);
   const [newCategory, setNewCategory] = React.useState<string>(bookmark.categories?.join(', ') || "");  //.join(', ') takes all the separate words in the array and glues them together into one string: "Java, Spring"
 
   const handleUpdateCategory = async () => {
@@ -83,7 +100,7 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
         {/* 🏷️ THE TAG HUD */}
         <div className="flex items-center justify-between mb-3 min-h-[24px]">
           <div className="flex flex-wrap gap-1.5">
-            <TagInput tags={tags} setTags={setTags} placeHolder='ADD_TAGS' inForm={false} />
+            <TagInput tags={tags} setTags={setTags} placeHolder='Add Tags' isEditing={isEditing} setIsEditing={setIsEditing} />
           </div>
 
           {/* ⚙️ THE EDIT TRIGGER */}
@@ -91,12 +108,16 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
             onClick={(e) => { e.stopPropagation(); setIsEditing(!isEditing); }}
             className="text-zinc-500 hover:text-lime-500 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+            {isEditing ?
+              <p className='text-xs font-mono uppercase text-zinc-400 dark:text-zinc-600 tracking-tighter'>x</p>
+              :
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+            }
           </button>
         </div>
 
         {/* 📝 THE EDIT INPUT (Shows only when isEditing is true) */}
-        {isEditing && (
+        {/* {isEditing && (
           <div className="mb-3 animate-in fade-in slide-in-from-top-1 duration-300">
             <input
               autoFocus
@@ -108,7 +129,7 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
               onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory()}
             />
           </div>
-        )}
+        )} */}
 
         <h3 className="font-bold text-sm leading-snug line-clamp-2 text-zinc-900 dark:text-zinc-100 group-hover:text-lime-500 transition-colors">
           {bookmark.title || "UNTITLED_NODE"}

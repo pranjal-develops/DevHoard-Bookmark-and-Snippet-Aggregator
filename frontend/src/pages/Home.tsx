@@ -107,7 +107,7 @@ export default function App() {
                         {/* Results Grid */}
                         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {bookmarks.map((b: Bookmark) => (
-                                <Card key={b.id} bookmark={b} setBookmarks={setBookmarks} onTagClick={handleTagClick} />
+                                <Card key={b.id} bookmark={b} setBookmarks={setBookmarks} />
                             ))}
                         </div>
                     </div>

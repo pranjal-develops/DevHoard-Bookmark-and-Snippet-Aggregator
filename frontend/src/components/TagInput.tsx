@@ -1,14 +1,28 @@
 import React, { useState } from 'react'
 import Tag from './Tag';
 
-interface TagInputProps {
+type TagInputPropsBase = {     //Changing interface to type
     tags: string[];
     setTags: (tags: string[]) => void;
     placeHolder?: string;
-    inForm: boolean;
+    inForm?: boolean;
+    isEditing?: boolean;
+    setIsEditing?: (isEditing: boolean) => void;
 }
 
-const TagInput: React.FC<TagInputProps> = ({ tags, setTags, placeHolder, inForm }) => {
+type OnURL = TagInputPropsBase & {
+    isEditing?: undefined;
+    setIsEditing?: undefined;
+}
+
+type NotOnURL = TagInputPropsBase & {
+    isEditing: true | false;
+    setIsEditing: (isEditing: boolean) => void;
+}
+
+type TagInputProps = OnURL | NotOnURL;
+
+const TagInput: React.FC<TagInputProps> = ({ tags, setTags, placeHolder, inForm, isEditing, setIsEditing }) => {
 
     const [value, setValue] = useState('');
 
@@ -19,19 +33,35 @@ const TagInput: React.FC<TagInputProps> = ({ tags, setTags, placeHolder, inForm 
             {tags.map((tag, index) => (
                 <Tag key={index} name={tag} onClick={() => setTags(tags.filter((_, i) => i !== index))} />
             ))}
+            {isEditing &&
 
-            <input value={value} onChange={(e) => setValue(e.target.value)} type="text" placeholder={placeHolder} className={inForm ?
-                'px-5 py-4 rounded-xl bg-white dark:bg-[hsl(0,0%,10%)] border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-4 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-sm'
-                :
-                'flex-1 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:ring-2 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-xs dark:text-zinc-300'} onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        if (value.trim() !== '' && !set.has(value.trim())) {
-                            setTags([...tags, value.trim()]);
-                            setValue('');
+                <input value={value} onChange={(e) => setValue(e.target.value)} type="text" placeholder={placeHolder} className=
+                    'flex-1 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:ring-2 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-xs dark:text-zinc-300' onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') {
+                            e.preventDefault();
+                            if (value.trim() !== '' && !set.has(value.trim())) {
+                                setTags([...tags, value.trim()]);
+                                setValue('');
+                                setIsEditing(false);
+                            }
                         }
-                    }
-                }} />
+                    }} />
+            }
+
+            {inForm &&
+                <input value={value} onChange={(e) => setValue(e.target.value)} type="text" placeholder={placeHolder} className=
+                    'px-5 py-4 rounded-xl bg-white dark:bg-[hsl(0,0%,10%)] border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-4 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-sm'
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') {
+                            e.preventDefault();
+                            if (value.trim() !== '' && !set.has(value.trim())) {
+                                setTags([...tags, value.trim()]);
+                                setValue('');
+                            }
+                        }
+                    }} />
+            }
+
         </div>
     )
 }
