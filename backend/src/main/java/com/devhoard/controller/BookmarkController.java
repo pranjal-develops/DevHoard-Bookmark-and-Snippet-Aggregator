@@ -21,15 +21,11 @@ public class BookmarkController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-//    public Bookmark saveBookmark(@RequestBody Map<String, String> payload) throws IOException {
-//        String url = payload.get("url");
-//        return bookmarkService.scrapeAndSave(url);
-//    }
     public void saveBookmark(@Valid @RequestBody BookmarkRequest payload){
         try {
             String url = payload.getUrl();
             Set<String> categories = payload.getCategories();
-            if(categories == null || categories.isEmpty()) categories = new HashSet<>(Collections.singletonList("Uncategorized"));
+//            if(categories == null || categories.isEmpty()) categories = new HashSet<>(Collections.singletonList("Uncategorized"));
             bookmarkService.scrapeAndSave(url, categories);
         }   catch (Exception e)  {
             throw new RuntimeException("An error has occurred:", e);

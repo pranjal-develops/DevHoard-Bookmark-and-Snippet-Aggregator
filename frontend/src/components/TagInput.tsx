@@ -7,50 +7,41 @@ type TagInputPropsBase = {     //Changing interface to type
     placeHolder?: string;
     inForm?: boolean;
     isEditing?: boolean;
-    setIsEditing?: (isEditing: boolean) => void;
+    onTagClick?: (tag: string) => void;
 }
 
 type OnURL = TagInputPropsBase & {
-    isEditing?: undefined;
-    setIsEditing?: undefined;
+    inForm: true;
+    onTagClick?: undefined;
 }
 
 type NotOnURL = TagInputPropsBase & {
-    isEditing: true | false;
-    setIsEditing: (isEditing: boolean) => void;
+    inForm?: false;
+    onTagClick: (tag: string) => void;
 }
 
 type TagInputProps = OnURL | NotOnURL;
 
-const TagInput: React.FC<TagInputProps> = ({ tags, setTags, placeHolder, inForm, isEditing, setIsEditing }) => {
+const TagInput: React.FC<TagInputProps> = ({ tags, setTags, placeHolder, inForm, isEditing, onTagClick }) => {
 
     const [value, setValue] = useState('');
 
     const set = new Set(tags);
 
     return (
-        <div className='flex flex-wrap items-center gap-2'>
+        <div className='flex flex-wrap items-center gap-2'
+            onClick={(e) => e.stopPropagation()}
+        >
             {tags.map((tag, index) => (
-                <Tag key={index} name={tag} onClick={() => setTags(tags.filter((_, i) => i !== index))} />
+                <Tag key={index} name={tag} onClick={(isEditing || inForm) ? () => setTags(tags.filter((_, i) => i !== index)) : () => onTagClick(tag)} />
             ))}
-            {isEditing &&
+            {(isEditing || inForm) &&
 
-                <input value={value} onChange={(e) => setValue(e.target.value)} type="text" placeholder={placeHolder} className=
-                    'flex-1 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:ring-2 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-xs dark:text-zinc-300' onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ',') {
-                            e.preventDefault();
-                            if (value.trim() !== '' && !set.has(value.trim())) {
-                                setTags([...tags, value.trim()]);
-                                setValue('');
-                                setIsEditing(false);
-                            }
-                        }
-                    }} />
-            }
-
-            {inForm &&
-                <input value={value} onChange={(e) => setValue(e.target.value)} type="text" placeholder={placeHolder} className=
-                    'px-5 py-4 rounded-xl bg-white dark:bg-[hsl(0,0%,10%)] border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-4 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-sm'
+                <input value={value} onChange={(e) => setValue(e.target.value)} type="text" placeholder={placeHolder} className={
+                    inForm ?
+                        'px-5 py-4 rounded-xl bg-white dark:bg-[hsl(0,0%,10%)] border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-4 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-sm'
+                        :
+                        'flex-1 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:ring-2 focus:ring-lime-500/20 focus:border-lime-500 dark:focus:border-lime-400 transition-all font-mono text-xs dark:text-zinc-300'}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ',') {
                             e.preventDefault();

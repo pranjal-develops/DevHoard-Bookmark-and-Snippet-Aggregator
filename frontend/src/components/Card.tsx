@@ -1,5 +1,5 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import TagInput from './TagInput';
 
 interface Bookmark {
@@ -15,14 +15,16 @@ interface Bookmark {
 interface CardProps {
   bookmark: Bookmark;
   setBookmarks: (value: React.SetStateAction<Bookmark[]>) => void;
-  onTagClick: (tagName: string) => void;
+  onTagClick: (CategoryName: string) => void;
 }
 
 
 
 const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
 
-  const [tags, setTags] = useState(bookmark.categories || []);
+  const isFirstRender = useRef(true);
+
+  const [Categories, setCategories] = useState(bookmark.categories || []);
 
   const handleDelete = async (id: string) => {
     try {
@@ -44,40 +46,32 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
 
 
   useEffect(() => {
-    const saveTags = async () => {
+    const saveCategories = async () => {
       try {
-        await axios.patch(`http://localhost:8080/api/bookmarks/${bookmark.id}/category`, {
-          categories: tags
+        const response = await axios.patch(`http://localhost:8080/api/bookmarks/${bookmark.id}/category`, {
+          categories: Categories
         })
-        // setBookmarks(prev => prev.map(b => b.id === bookmark.id ? response.data : b));
+        setBookmarks(initialVal => initialVal.map(b => b.id === bookmark.id ? response.data : b));
       }
       catch (e) {
-        console.log("Error saving tags", e);
+        console.log("Error saving Categories", e);
       }
     }
-    saveTags();
-  }, [tags])
+
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    else saveCategories();
+  }, [Categories])
 
 
   const [isEditing, setIsEditing] = React.useState(false);
-  const [newCategory, setNewCategory] = React.useState<string>(bookmark.categories?.join(', ') || "");  //.join(', ') takes all the separate words in the array and glues them together into one string: "Java, Spring"
-
-  const handleUpdateCategory = async () => {
-    try {
-      const response = await axios.patch(`http://localhost:8080/api/bookmarks/${bookmark.id}/category`, {
-        categories: newCategory.split(',').map(tag => tag.trim())
-      });
-      // Update the list so the UI reflects the change
-      setBookmarks(prev => prev.map(b => b.id === bookmark.id ? response.data : b));
-      setIsEditing(false); // Stop editing
-    } catch (e) {
-      console.log("Error updating category", e);
-    }
-  }
-
 
   return (
-    <div className="group relative bg-white dark:bg-[#0a0a0a] rounded-xl shadow-md border border-zinc-200 dark:border-zinc-800/50 overflow-hidden hover:shadow-[0_0_30px_rgba(163,230,53,0.15)] hover:border-lime-500/50 transition-all duration-500 cursor-pointer">
+    <div className="group relative bg-white dark:bg-[#0a0a0a] rounded-xl shadow-md border border-zinc-200 dark:border-zinc-800/50 overflow-hidden hover:shadow-[0_0_30px_rgba(163,230,53,0.15)] hover:border-lime-500/50 transition-all duration-500 cursor-pointer"
+      onClick={() => window.open(bookmark.originalUrl, '_blank')}
+    >
 
       {/* --- Image Layer with Scanning Glow --- */}
       <div className="h-44 relative bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-900 overflow-hidden">
@@ -97,10 +91,10 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
 
       {/* --- Data Layer --- */}
       <div className="p-5">
-        {/* 🏷️ THE TAG HUD */}
+        {/* 🏷️ THE Category HUD */}
         <div className="flex items-center justify-between mb-3 min-h-[24px]">
           <div className="flex flex-wrap gap-1.5">
-            <TagInput tags={tags} setTags={setTags} placeHolder='Add Tags' isEditing={isEditing} setIsEditing={setIsEditing} />
+            <TagInput tags={Categories} setTags={setCategories} placeHolder='Add Categories' isEditing={isEditing} onTagClick={onTagClick} />
           </div>
 
           {/* ⚙️ THE EDIT TRIGGER */}
@@ -115,21 +109,6 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
             }
           </button>
         </div>
-
-        {/* 📝 THE EDIT INPUT (Shows only when isEditing is true) */}
-        {/* {isEditing && (
-          <div className="mb-3 animate-in fade-in slide-in-from-top-1 duration-300">
-            <input
-              autoFocus
-              className="w-full text-[10px] font-mono px-2 py-1.5 rounded-sm bg-zinc-900 text-lime-400 border border-lime-500/50 outline-none"
-              placeholder="ENTER_TAGS (e.g. Java, AI, News)"
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              onBlur={handleUpdateCategory}
-              onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory()}
-            />
-          </div>
-        )} */}
 
         <h3 className="font-bold text-sm leading-snug line-clamp-2 text-zinc-900 dark:text-zinc-100 group-hover:text-lime-500 transition-colors">
           {bookmark.title || "UNTITLED_NODE"}
