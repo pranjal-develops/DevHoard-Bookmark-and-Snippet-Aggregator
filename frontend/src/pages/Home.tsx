@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import UrlForm from '../components/UrlForm';
 import Card from '../components/Card';
 import axios from 'axios';
-import Search from '../components/Search';
 import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
 
