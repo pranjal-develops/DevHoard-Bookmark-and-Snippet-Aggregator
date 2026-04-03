@@ -1,5 +1,9 @@
 import React from 'react'
 import Search from './Search'
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store';
+import { useDispatch } from 'react-redux';
+import { toggleTheme, toggleSidebar } from '../store/slices/uiSlice';
 
 interface Bookmark {
     id: string;
@@ -12,19 +16,20 @@ interface Bookmark {
 }
 
 interface NavbarProps {
-    isDark: boolean;
-    setIsDark: (value: boolean) => void;
     setBookmarks: (value: React.SetStateAction<Bookmark[]>) => void;
     isSubmitting: boolean;
-    toggleSidebar: () => void;
     selectedCategory: string | null;
     favoritesOnly: boolean;
     refreshSignal: boolean;
     // setFavoritesOnly: (value: boolean) => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ isDark, setIsDark, setBookmarks, isSubmitting, toggleSidebar, selectedCategory, favoritesOnly, refreshSignal }) => {
+const Navbar: React.FC<NavbarProps> = ({ setBookmarks, isSubmitting, selectedCategory, favoritesOnly, refreshSignal }) => {
     const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
+
+    const { isDark } = useSelector((state: RootState) => state.ui);
+    const dispatch = useDispatch();
+
 
     return (
         <header className="w-full sticky top-0 z-50 transition-all duration-300">
@@ -32,7 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, setIsDark, setBookmarks, isSubm
                 {/* Logo Section */}
                 <div className="flex items-center gap-2 md:gap-4 shrink-0">
                     <button
-                        onClick={toggleSidebar}
+                        onClick={() => dispatch(toggleSidebar())}
                         className="p-2 -ml-2 text-zinc-600 dark:text-lime-400 hover:bg-zinc-100 dark:hover:bg-lime-500/10 rounded-lg transition-all active:scale-95"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
@@ -72,7 +77,7 @@ const Navbar: React.FC<NavbarProps> = ({ isDark, setIsDark, setBookmarks, isSubm
                     </div>
 
                     <button
-                        onClick={() => setIsDark(!isDark)}
+                        onClick={() => dispatch(toggleTheme())}
                         className="p-2 md:px-4 md:py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-widest border border-zinc-200 dark:border-lime-500/30 text-zinc-500 dark:text-lime-400 hover:bg-zinc-100 dark:hover:bg-lime-500/10 transition-all active:scale-95 shadow-[0_0_10px_rgba(132,204,22,0.05)]">
                         <span className="hidden md:inline">{isDark ? '// EXIT_CYBER' : '// ENTER_CYBER'}</span>
                         <span className="md:hidden">

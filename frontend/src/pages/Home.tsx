@@ -5,6 +5,9 @@ import Card from '../components/Card';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
+import { useDispatch, useSelector } from 'react-redux';
+import { type RootState } from '../store';
+import { toggleTheme, toggleSidebar, setShowToast } from '../store/slices/uiSlice';
 
 
 interface Bookmark {
@@ -19,13 +22,13 @@ interface Bookmark {
 
 export default function App() {
     const [url, setUrl] = useState('');
-    const [isDark, setIsDark] = useState<boolean>(true);
+    const dispatch = useDispatch();
+    const { isDark, isSidebarOpen, showToast } = useSelector((state: RootState) => state.ui);
     const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
-        typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true
-    );
-    const [showToast, setShowToast] = useState(false);
+    // const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
+    //     typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true
+    // );
     const [categories, setCategories] = useState<string[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -37,14 +40,14 @@ export default function App() {
         setIsSubmitting(true);
         try {
             await axios.post("http://localhost:8080/api/bookmarks", { url, categories });
-            setShowToast(true);
+            dispatch(setShowToast(true));
 
             setTimeout(() => {
                 setRefreshSignal(val => !val);
             }, 3000);
 
             setTimeout(() => {
-                setShowToast(false);
+                dispatch(setShowToast(false));
                 setRefreshSignal(val => !val);;
             }, 10000);
 
@@ -66,11 +69,8 @@ export default function App() {
     return (
         <div className={`${isDark ? 'dark' : ''} h-screen overflow-hidden font-sans`}>
             <Navbar
-                isDark={isDark}
-                setIsDark={setIsDark}
                 setBookmarks={setBookmarks}
                 isSubmitting={isSubmitting}
-                toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                 selectedCategory={selectedCategory}
                 favoritesOnly={favoritesOnly}
                 refreshSignal={refreshSignal}
@@ -78,8 +78,6 @@ export default function App() {
             <div className="flex h-full bg-zinc-50 text-zinc-900 transition-colors duration-300 dark:bg-[hsl(0,0%,3%)] dark:text-zinc-100">
 
                 <Sidebar
-                    isOpen={isSidebarOpen}
-                    setIsOpen={setIsSidebarOpen}
                     bookmarks={bookmarks}
                     selectedCategory={selectedCategory}
                     setSelectedCategory={setSelectedCategory}

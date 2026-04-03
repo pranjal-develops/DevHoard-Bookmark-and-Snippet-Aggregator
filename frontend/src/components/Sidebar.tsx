@@ -1,6 +1,9 @@
+import { useDispatch, useSelector } from "react-redux";
+import { toggleSidebar } from '../store/slices/uiSlice';
+import type { RootState } from "../store";
+
+
 interface SidebarProps {
-    isOpen: boolean;
-    setIsOpen: (value: boolean) => void;
     bookmarks: any[]; // New prop to see the categories
     selectedCategory: string | null; // Current filter
     setSelectedCategory: (category: string | null) => void; // Filter setter
@@ -9,27 +12,29 @@ interface SidebarProps {
 }
 
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, bookmarks, selectedCategory, setSelectedCategory, favoritesOnly, setFavoritesOnly }) => {
+const Sidebar: React.FC<SidebarProps> = ({ bookmarks, selectedCategory, setSelectedCategory, favoritesOnly, setFavoritesOnly }) => {
 
     const categories = Array.from(new Set(bookmarks.flatMap(b => b.categories || [])));
+    const { isSidebarOpen } = useSelector((state: RootState) => state.ui);
+    const dispatch = useDispatch();
 
     return (
         <>
             {/* Mobile/Overlay Backdrop */}
-            {isOpen && (
+            {isSidebarOpen && (
                 <div
                     className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 lg:hidden"
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => dispatch(toggleSidebar())}
                 />
             )}
 
             <aside
                 className={`fixed lg:relative inset-y-0 left-0 bg-white dark:bg-black text-zinc-900 dark:text-zinc-400 min-h-screen transition-all duration-300 z-50 overflow-hidden 
-                ${isOpen ? 'w-64 translate-x-0' : 'w-0 lg:w-0 -translate-x-full lg:translate-x-0'}`}
+                ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 lg:w-0 -translate-x-full lg:translate-x-0'}`}
             >
                 <div className="p-8 flex items-center justify-between lg:hidden text-lime-500">
                     <span className="font-mono font-black">MENU_SYS</span>
-                    <button onClick={() => setIsOpen(false)} className="text-zinc-500 hover:text-white">
+                    <button onClick={() => dispatch(toggleSidebar())} className="text-zinc-500 hover:text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     </button>
                 </div>
