@@ -1,20 +1,13 @@
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSidebar } from '../store/slices/uiSlice';
 import type { RootState } from "../store";
+import { setSelectedCategory, setFavoritesOnly } from '../store/slices/bookmarksSlice';
 
+const Sidebar = () => {
 
-interface SidebarProps {
-    bookmarks: any[]; // New prop to see the categories
-    selectedCategory: string | null; // Current filter
-    setSelectedCategory: (category: string | null) => void; // Filter setter
-    favoritesOnly: boolean;
-    setFavoritesOnly: (value: boolean) => void;
-}
+    const { items, selectedCategory, favoritesOnly } = useSelector((state: RootState) => state.bookmarks);
 
-
-const Sidebar: React.FC<SidebarProps> = ({ bookmarks, selectedCategory, setSelectedCategory, favoritesOnly, setFavoritesOnly }) => {
-
-    const categories = Array.from(new Set(bookmarks.flatMap(b => b.categories || [])));
+    const categories = Array.from(new Set(items.flatMap(b => b.categories || [])));
     const { isSidebarOpen } = useSelector((state: RootState) => state.ui);
     const dispatch = useDispatch();
 
@@ -44,7 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ bookmarks, selectedCategory, setSelec
                         Collections_Node
                     </div>
                     <button
-                        onClick={() => setSelectedCategory(null)}
+                        onClick={() => dispatch(setSelectedCategory(null))}
                         className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg font-mono text-xs transition-all ${!selectedCategory ? 'text-lime-500 bg-lime-500/10' : 'text-zinc-500 hover:text-white'}`}
                     >
                         [ ALL_COLLECTIONS ]
@@ -52,8 +45,8 @@ const Sidebar: React.FC<SidebarProps> = ({ bookmarks, selectedCategory, setSelec
 
                     <button
                         onClick={() => {
-                            setFavoritesOnly(!favoritesOnly);
-                            setSelectedCategory(null); // Clear category when viewing favorites
+                            dispatch(setFavoritesOnly(!favoritesOnly));
+                            dispatch(setSelectedCategory(null)); // Clear category when viewing favorites
                         }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-mono text-xs transition-all 
     ${favoritesOnly ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'text-zinc-500 hover:text-white'}`}
@@ -65,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ bookmarks, selectedCategory, setSelec
                     {categories.map((cat) => (
                         <button
                             key={cat}
-                            onClick={() => setSelectedCategory(cat)}
+                            onClick={() => dispatch(setSelectedCategory(cat))}
                             className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg font-mono text-xs transition-all ${selectedCategory === cat ? 'text-lime-500 bg-lime-500/10' : 'text-zinc-500 hover:text-white'}`}
                         >
                             :: {cat.toUpperCase()}

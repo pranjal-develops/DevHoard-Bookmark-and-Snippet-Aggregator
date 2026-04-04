@@ -7,7 +7,8 @@ import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { type RootState } from '../store';
-import { toggleTheme, toggleSidebar, setShowToast } from '../store/slices/uiSlice';
+import { setShowToast } from '../store/slices/uiSlice';
+import { setSelectedCategory } from '../store/slices/bookmarksSlice';
 
 
 interface Bookmark {
@@ -23,15 +24,13 @@ interface Bookmark {
 export default function App() {
     const [url, setUrl] = useState('');
     const dispatch = useDispatch();
-    const { isDark, isSidebarOpen, showToast } = useSelector((state: RootState) => state.ui);
-    const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+    const { isDark, showToast } = useSelector((state: RootState) => state.ui);
+    const { items } = useSelector((state: RootState) => state.bookmarks);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     // const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
     //     typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true
     // );
     const [categories, setCategories] = useState<string[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [favoritesOnly, setFavoritesOnly] = useState(false);
     const [refreshSignal, setRefreshSignal] = useState(false);
 
 
@@ -62,28 +61,19 @@ export default function App() {
     };
 
     const handleTagClick = (tagName: string) => {
-        setSelectedCategory(tagName);
+        dispatch(setSelectedCategory(tagName));
     };
 
 
     return (
         <div className={`${isDark ? 'dark' : ''} h-screen overflow-hidden font-sans`}>
             <Navbar
-                setBookmarks={setBookmarks}
                 isSubmitting={isSubmitting}
-                selectedCategory={selectedCategory}
-                favoritesOnly={favoritesOnly}
                 refreshSignal={refreshSignal}
             />
             <div className="flex h-full bg-zinc-50 text-zinc-900 transition-colors duration-300 dark:bg-[hsl(0,0%,3%)] dark:text-zinc-100">
 
-                <Sidebar
-                    bookmarks={bookmarks}
-                    selectedCategory={selectedCategory}
-                    setSelectedCategory={setSelectedCategory}
-                    favoritesOnly={favoritesOnly}
-                    setFavoritesOnly={setFavoritesOnly}
-                />
+                <Sidebar />
 
                 {/* Main Content Area */}
                 <main className="flex-1 flex flex-col items-center bg-zinc-50 dark:bg-[#020202] transition-colors duration-300 overflow-y-auto">
@@ -103,8 +93,8 @@ export default function App() {
 
                         {/* Results Grid */}
                         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {bookmarks.map((b: Bookmark) => (
-                                <Card key={b.id} bookmark={b} setBookmarks={setBookmarks} onTagClick={handleTagClick} />
+                            {items.map((b: Bookmark) => (
+                                <Card key={b.id} bookmark={b} onTagClick={handleTagClick} />
                             ))}
                         </div>
                     </div>

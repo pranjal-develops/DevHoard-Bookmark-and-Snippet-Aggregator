@@ -16,13 +16,12 @@ interface Bookmark {
 
 interface CardProps {
   bookmark: Bookmark;
-  setBookmarks: (value: React.SetStateAction<Bookmark[]>) => void;
   onTagClick: (CategoryName: string) => void;
 }
 
 
 
-const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
+const Card = ({ bookmark, onTagClick }: CardProps) => {
 
   const {
     Categories,
@@ -31,7 +30,7 @@ const Card = ({ bookmark, setBookmarks, onTagClick }: CardProps) => {
     handleToggleFavorite,
     isEditing,
     setIsEditing
-  } = useBookmarkActions(bookmark, setBookmarks);
+  } = useBookmarkActions(bookmark);
 
 
   return (

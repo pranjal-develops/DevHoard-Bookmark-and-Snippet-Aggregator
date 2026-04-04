@@ -1,15 +1,19 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
+import { setBookmarks } from '../store/slices/bookmarksSlice';
+import { useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
+import type { RootState } from '../store';
 
 interface SearchProps {
-    setBookmarks: (value: React.SetStateAction<any[]>) => void;
     isSubmitting: boolean;
-    selectedCategory: string | null;
-    favoritesOnly: boolean;
     refreshSignal: boolean;
 }
 
-const Search: React.FC<SearchProps> = ({ setBookmarks, isSubmitting, selectedCategory, favoritesOnly, refreshSignal }) => {
+const Search: React.FC<SearchProps> = ({ isSubmitting, refreshSignal }) => {
+
+    const dispatch = useDispatch();
+    const { selectedCategory, favoritesOnly } = useSelector((state: RootState) => state.bookmarks);
 
     const [searchText, setSearchText] = useState<string>("");
 
@@ -24,7 +28,7 @@ const Search: React.FC<SearchProps> = ({ setBookmarks, isSubmitting, selectedCat
                     url += `&favoritesOnly=${favoritesOnly}`;
                 }
                 const response = await axios.get(url);
-                setBookmarks(response.data);
+                dispatch(setBookmarks(response.data));
             } catch (error) {
                 console.log(error);
             }

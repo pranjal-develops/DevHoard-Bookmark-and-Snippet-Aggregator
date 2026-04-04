@@ -8,7 +8,7 @@ interface UIState {
 
 const initialState: UIState = {
     isDark: true,
-    isSidebarOpen: true, // or your window.matchMedia check logic
+    isSidebarOpen: typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true,
     showToast: false,
 };
 
