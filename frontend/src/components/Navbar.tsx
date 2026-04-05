@@ -5,12 +5,7 @@ import type { RootState } from '../store';
 import { useDispatch } from 'react-redux';
 import { toggleTheme, toggleSidebar } from '../store/slices/uiSlice';
 
-interface NavbarProps {
-    isSubmitting: boolean;
-    refreshSignal: boolean;
-}
-
-const Navbar: React.FC<NavbarProps> = ({ isSubmitting, refreshSignal }) => {
+const Navbar = () => {
 
     const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
     const { isDark } = useSelector((state: RootState) => state.ui);
@@ -38,10 +33,7 @@ const Navbar: React.FC<NavbarProps> = ({ isSubmitting, refreshSignal }) => {
 
                 {/* Search Bar (Desktop/Tablet) */}
                 <div className="hidden sm:block flex-1 max-w-sm md:max-w-md mx-4">
-                    <Search
-                        isSubmitting={isSubmitting}
-                        refreshSignal={refreshSignal}
-                    />
+                    <Search />
 
                 </div>
 
@@ -77,9 +69,7 @@ const Navbar: React.FC<NavbarProps> = ({ isSubmitting, refreshSignal }) => {
             {/* Mobile Search Overlay */}
             {isMobileSearchOpen && (
                 <div className="sm:hidden w-full px-4 py-3 bg-white/95 dark:bg-black/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 animate-in slide-in-from-top duration-300">
-                    <Search
-                        isSubmitting={isSubmitting}
-                        refreshSignal={refreshSignal} />
+                    <Search />
                 </div>
             )}
         </header>

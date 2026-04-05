@@ -1,40 +1,8 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
-import { setBookmarks } from '../store/slices/bookmarksSlice';
-import { useSelector } from 'react-redux';
-import { useDispatch } from 'react-redux';
-import type { RootState } from '../store';
+import { useBookmarks } from '../hooks/useBookmarks';
 
-interface SearchProps {
-    isSubmitting: boolean;
-    refreshSignal: boolean;
-}
+const Search = () => {
 
-const Search: React.FC<SearchProps> = ({ isSubmitting, refreshSignal }) => {
-
-    const dispatch = useDispatch();
-    const { selectedCategory, favoritesOnly } = useSelector((state: RootState) => state.bookmarks);
-
-    const [searchText, setSearchText] = useState<string>("");
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                let url = `http://localhost:8080/api/bookmarks?q=${searchText}`;
-                if (selectedCategory) {
-                    url += `&category=${selectedCategory}`;
-                }
-                if (favoritesOnly) {
-                    url += `&favoritesOnly=${favoritesOnly}`;
-                }
-                const response = await axios.get(url);
-                dispatch(setBookmarks(response.data));
-            } catch (error) {
-                console.log(error);
-            }
-        }
-        fetchData();
-    }, [searchText, isSubmitting, selectedCategory, favoritesOnly, refreshSignal])
+    const { searchText, setSearchText } = useBookmarks();
 
     return (
         <input

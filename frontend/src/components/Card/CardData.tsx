@@ -1,5 +1,6 @@
 import React from 'react'
 import TagInput from '../TagInput';
+import { useBookmarks } from '../../hooks/useBookmarks';
 
 interface CardDataProps {
     title: string;
@@ -8,17 +9,17 @@ interface CardDataProps {
     setCategories: (tags: string[]) => void;
     isEditing: boolean;
     setIsEditing: (isEditing: boolean) => void;
-    onTagClick: (tag: string) => void;
 }
 
 
-const CardData: React.FC<CardDataProps> = ({ title, description, categories, setCategories, isEditing, setIsEditing, onTagClick }) => {
+const CardData: React.FC<CardDataProps> = ({ title, description, categories, setCategories, isEditing, setIsEditing }) => {
+    const { handleTagClick } = useBookmarks();
     return (
         <>
             {/* 🏷️ THE Category HUD */}
             <div className="flex items-center justify-between mb-3 min-h-[24px]">
                 <div className="flex flex-wrap gap-1.5">
-                    <TagInput tags={categories} setTags={setCategories} placeHolder='Add Categories' isEditing={isEditing} onTagClick={onTagClick} />
+                    <TagInput tags={categories} setTags={setCategories} placeHolder='Add Categories' isEditing={isEditing} onTagClick={handleTagClick} />
                 </div>
 
                 {/* ⚙️ THE EDIT TRIGGER */}

@@ -1,4 +1,3 @@
-import React from 'react'
 import { useBookmarkActions } from '../hooks/useBookmarkActions'
 import CardVisuals from './Card/CardVisuals';
 import CardData from './Card/CardData';
@@ -16,12 +15,13 @@ interface Bookmark {
 
 interface CardProps {
   bookmark: Bookmark;
-  onTagClick: (CategoryName: string) => void;
 }
 
 
 
-const Card = ({ bookmark, onTagClick }: CardProps) => {
+const Card = ({ bookmark,
+}: CardProps) => {
+
 
   const {
     Categories,
@@ -42,7 +42,7 @@ const Card = ({ bookmark, onTagClick }: CardProps) => {
 
       {/* --- Data Layer --- */}
       <div className="p-5">
-        <CardData title={bookmark.title} description={bookmark.description} categories={Categories} setCategories={setCategories} isEditing={isEditing} setIsEditing={setIsEditing} onTagClick={onTagClick} />
+        <CardData title={bookmark.title} description={bookmark.description} categories={Categories} setCategories={setCategories} isEditing={isEditing} setIsEditing={setIsEditing} />
         <CardActions id={bookmark.id} originalUrl={bookmark.originalUrl} onToggleFavorite={handleToggleFavorite} isFavorite={bookmark.isFavorite} onDelete={handleDelete} />
       </div>
     </div>

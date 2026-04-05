@@ -1,18 +1,10 @@
-import React from 'react'
 import TagInput from './TagInput';
+import { useBookmarks } from '../hooks/useBookmarks';
 
-interface UrlFormProps {
-    url: string;
-    categories: string[];
-    setUrl: (url: string) => void;
-    setCategories: (categories: string[]) => void;
-    handleSubmit: (e: React.FormEvent) => void;
-    isSubmitting: boolean;
-}
+const UrlForm = () => {
 
+    const { url, setUrl, handleSubmit, categories, setCategories, isSubmitting } = useBookmarks()
 
-{/* The URL Form */ }
-const UrlForm = ({ url, setUrl, handleSubmit, isSubmitting, categories, setCategories }: UrlFormProps) => {
     return (
         <form onSubmit={handleSubmit} className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 mb-12">
             <input

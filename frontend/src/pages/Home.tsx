@@ -1,15 +1,10 @@
-import { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import UrlForm from '../components/UrlForm';
 import Card from '../components/Card';
-import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { type RootState } from '../store';
-import { setShowToast } from '../store/slices/uiSlice';
-import { setSelectedCategory } from '../store/slices/bookmarksSlice';
-
 
 interface Bookmark {
     id: string;
@@ -22,55 +17,12 @@ interface Bookmark {
 }
 
 export default function App() {
-    const [url, setUrl] = useState('');
-    const dispatch = useDispatch();
     const { isDark, showToast } = useSelector((state: RootState) => state.ui);
     const { items } = useSelector((state: RootState) => state.bookmarks);
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    // const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
-    //     typeof window !== 'undefined' && window.matchMedia('(max-width:600px)').matches ? false : true
-    // );
-    const [categories, setCategories] = useState<string[]>([]);
-    const [refreshSignal, setRefreshSignal] = useState(false);
-
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        try {
-            await axios.post("http://localhost:8080/api/bookmarks", { url, categories });
-            dispatch(setShowToast(true));
-
-            setTimeout(() => {
-                setRefreshSignal(val => !val);
-            }, 3000);
-
-            setTimeout(() => {
-                dispatch(setShowToast(false));
-                setRefreshSignal(val => !val);;
-            }, 10000);
-
-            setUrl("");
-            setCategories([]);
-            // window.location.reload();
-        } catch (error) {
-            console.log("Error saving bookmark", error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleTagClick = (tagName: string) => {
-        dispatch(setSelectedCategory(tagName));
-    };
-
 
     return (
         <div className={`${isDark ? 'dark' : ''} h-screen overflow-hidden font-sans`}>
-            <Navbar
-                isSubmitting={isSubmitting}
-                refreshSignal={refreshSignal}
-            />
+            <Navbar />
             <div className="flex h-full bg-zinc-50 text-zinc-900 transition-colors duration-300 dark:bg-[hsl(0,0%,3%)] dark:text-zinc-100">
 
                 <Sidebar />
@@ -89,12 +41,12 @@ export default function App() {
                             </div>
                         </div>
 
-                        <UrlForm url={url} setUrl={setUrl} handleSubmit={handleSubmit} isSubmitting={isSubmitting} categories={categories} setCategories={setCategories} />
+                        <UrlForm />
 
                         {/* Results Grid */}
                         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {items.map((b: Bookmark) => (
-                                <Card key={b.id} bookmark={b} onTagClick={handleTagClick} />
+                                <Card key={b.id} bookmark={b} />
                             ))}
                         </div>
                     </div>

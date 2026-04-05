@@ -37,31 +37,42 @@ public class BookmarkService {
         }
 
         try {
-            //Some Sites like StackOverflow will block this as when JSoup makes an HTTP request to StackOverflow, it sends a secret header identifying itself as "Java/17.0.x".
-            //StackOverflow's firewall immediately sees that you are a bot, not a human, and blocks your request with a 403 Forbidden status. Because JSoup crashes on a 403, your try/catch block catches the crash, throws your custom RuntimeException, and the entity is never saved.
-//            Document document = Jsoup.connect(url).get();
+            // Some Sites like StackOverflow will block this as when JSoup makes an HTTP
+            // request to StackOverflow, it sends a secret header identifying itself as
+            // "Java/17.0.x".
+            // StackOverflow's firewall immediately sees that you are a bot, not a human,
+            // and blocks your request with a 403 Forbidden status. Because JSoup crashes on
+            // a 403, your try/catch block catches the crash, throws your custom
+            // RuntimeException, and the entity is never saved.
+            // Document document = Jsoup.connect(url).get();
 
-            //This will "spoof" your identity so StackOverflow or any other such site thinks you are a real person using the Google Chrome browser!
-//            Document document = Jsoup.connect(url)
-//                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-//                    .referrer("http://www.google.com")
-//                    .get();
-            try{
+            // This will "spoof" your identity so StackOverflow or any other such site
+            // thinks you are a real person using the Google Chrome browser!
+            // Document document = Jsoup.connect(url)
+            // .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+            // (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            // .referrer("http://www.google.com")
+            // .get();
+            try {
                 document = Jsoup.connect(scrapeUrl)
-                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .userAgent(
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                         .header("Accept-Language", "en-US,en;q=0.9")
                         .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
                         .referrer("https://www.google.com")
                         .get();
             } catch (IOException e) {
-                    document = scrapeWithSelenium(scrapeUrl);
-            }
-            if (document == null) throw new Exception("Failed to Scrape");
-            String imgUrl = firstNonEmpty(document, "meta[property=og:image:url]","meta[property=og:image]","meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]");
-
-            if(imgUrl==null || imgUrl.isEmpty()){
                 document = scrapeWithSelenium(scrapeUrl);
-                imgUrl = firstNonEmpty(document, "meta[property=og:image:url]","meta[property=og:image]","meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]");
+            }
+            if (document == null)
+                throw new Exception("Failed to Scrape");
+            String imgUrl = firstNonEmpty(document, "meta[property=og:image:url]", "meta[property=og:image]",
+                    "meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]");
+
+            if (imgUrl == null || imgUrl.isEmpty()) {
+                document = scrapeWithSelenium(scrapeUrl);
+                imgUrl = firstNonEmpty(document, "meta[property=og:image:url]", "meta[property=og:image]",
+                        "meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]");
             }
 
             String title = document.title();
@@ -69,15 +80,15 @@ public class BookmarkService {
             Bookmark bookmark = new Bookmark(url, title, description, imgUrl, categories);
             bookmarkRepo.save(bookmark);
         } catch (Exception e) {
-            throw new RuntimeException("An error occurred while saving the entity",e);
+            throw new RuntimeException("An error occurred while saving the entity", e);
         }
     }
 
-    public void deleteBookmark(Long id){
+    public void deleteBookmark(Long id) {
         bookmarkRepo.deleteById(id);
     }
 
-    public List<Bookmark> search(String keyword){
+    public List<Bookmark> search(String keyword) {
         return bookmarkRepo.findByTitleContainingIgnoreCase(keyword);
     }
 
@@ -85,7 +96,9 @@ public class BookmarkService {
         return bookmarkRepo.findAll();
     }
 
-    public List<Bookmark> getByCategory (String category){ return bookmarkRepo.findByCategoriesContaining(category);}
+    public List<Bookmark> getByCategory(String category) {
+        return bookmarkRepo.findByCategoriesContaining(category);
+    }
 
     public Bookmark updateCategory(Long id, Set<String> categories) {
         Bookmark bookmark = bookmarkRepo.findById(id)
@@ -106,19 +119,21 @@ public class BookmarkService {
         return bookmarkRepo.findByIsFavoriteTrue();
     }
 
-//    private static String firstNonEmpty(Document doc, String... cssQueries) {
-//        for (String q : cssQueries) {
-//            String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
-//            if (v != null && !v.isEmpty()) return v;
-//        }
-//        return "";
-//    }
+    // private static String firstNonEmpty(Document doc, String... cssQueries) {
+    // for (String q : cssQueries) {
+    // String v = doc.select(q).attr(q.contains("meta") ? "abs:content" :
+    // "abs:href");
+    // if (v != null && !v.isEmpty()) return v;
+    // }
+    // return "";
+    // }
 
     private static String firstNonEmpty(Document doc, String... cssQueries) {
         // Stage 1: Check your specific high-quality queries (og:image, etc.)
         for (String q : cssQueries) {
             String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
-            if (isValidImage(v)) return v; // ✅ NEW: Use a helper to check quality!
+            if (isValidImage(v))
+                return v; // ✅ NEW: Use a helper to check quality!
         }
 
         // Stage 2: The Shotgun meta-scan (Now with a "Hiring" filter!)
@@ -131,8 +146,22 @@ public class BookmarkService {
                     property.contains("thumbnail") || name.contains("thumbnail")) {
 
                 String v = meta.attr("abs:content");
-                if (isValidImage(v)) return v;
+                if (isValidImage(v))
+                    return v;
             }
+        }
+
+        // Stage 3: THE CONTENT SCAN
+        // Loop through images inside the actual question or post body
+        for (org.jsoup.nodes.Element img : doc.select(".s-prose img, #question img, main img")) {
+            String v = img.attr("abs:src");
+            if (isValidImage(v)) return v;
+        }
+
+        // Stage 4: BRANDING FALLBACK
+        String loc = doc.location().toLowerCase();
+        if (loc.contains("stackoverflow.com")) {
+            return "https://cdn.sstatic.net/Sites/stackoverflow/Img/apple-touch-icon@2.png";
         }
 
 
@@ -141,16 +170,15 @@ public class BookmarkService {
 
     // 🛡️ THE QUALITY GUARD:
     private static boolean isValidImage(String url) {
-        if (url == null || url.isEmpty()) return false;
+        if (url == null || url.isEmpty())
+            return false;
         String lower = url.toLowerCase();
 
-        //  THE WALL: If it contains any of these words, it's trash!
+        // THE WALL: If it contains any of these words, it's trash!
         return !(lower.contains("icon") || lower.contains("favicon") ||
                 lower.contains("logo") || lower.contains("76x76") ||
                 lower.contains("px-"));
     }
-
-
 
     private Document scrapeWithSelenium(String url) {
         // 1. Setup the invisible Chrome driver
@@ -158,17 +186,25 @@ public class BookmarkService {
         options.addArguments("--headless=new"); // Runs without a window & Use the 'new' headless engine
         options.addArguments("--disable-blink-features=AutomationControlled"); // Hides the "I am a robot" flag
         options.addArguments("--window-size=1920,1080"); // Pretend we have a big monitor
-        //  THE FAKE ID: This tricks Cloudflare into thinking you are a regular person on a desktop.
-        options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-        options.setExperimentalOption("excludeSwitches", java.util.Collections.singletonList("enable-automation")); // Turns off the "Chrome is being controlled" banner
+        // THE FAKE ID: This tricks Cloudflare into thinking you are a regular person on
+        // a desktop.
+        options.addArguments(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        options.setExperimentalOption("excludeSwitches", java.util.Collections.singletonList("enable-automation")); // Turns
+                                                                                                                    // off
+                                                                                                                    // the
+                                                                                                                    // "Chrome
+                                                                                                                    // is
+                                                                                                                    // being
+                                                                                                                    // controlled"
+                                                                                                                    // banner
         options.setExperimentalOption("useAutomationExtension", false);
         options.addArguments("--disable-gpu");
         options.addArguments("--no-sandbox");
         options.addArguments("--blink-settings=imagesEnabled=true");
         options.addArguments("--incognito");
         // ⚡ THE EAGER STRATEGY: Stop waiting once the basic HTML is loaded!
-//        options.setPageLoadStrategy(PageLoadStrategy.EAGER);
-
+        // options.setPageLoadStrategy(PageLoadStrategy.EAGER);
 
         WebDriver driver = new ChromeDriver(options);
         try {
@@ -176,12 +212,17 @@ public class BookmarkService {
             driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
             driver.get(url);
 
-            // Wait up to 20 seconds, but continue the INSTANT the title is no longer "Just a moment"
+            // Wait up to 20 seconds, but continue the INSTANT the title is no longer "Just
+            // a moment"
             new WebDriverWait(driver, Duration.ofSeconds(20))
-//                    .until(ExpectedConditions.not(ExpectedConditions.titleContains("Just a moment")));
+                    // .until(ExpectedConditions.not(ExpectedConditions.titleContains("Just a
+                    // moment")));
                     .until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.tagName("body")));
 
-            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ignored) {
+            }
 
             // 3. Extract the final rendered HTML and convert it back to a JSoup Document
             String html = driver.getPageSource();
@@ -191,6 +232,5 @@ public class BookmarkService {
             driver.quit();
         }
     }
-
 
 }
