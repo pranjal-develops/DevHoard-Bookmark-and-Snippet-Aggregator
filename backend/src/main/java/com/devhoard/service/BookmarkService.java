@@ -168,7 +168,7 @@ public class BookmarkService {
         return "";
     }
 
-    // 🛡️ THE QUALITY GUARD:
+    //  THE QUALITY GUARD:
     private static boolean isValidImage(String url) {
         if (url == null || url.isEmpty())
             return false;

@@ -30,6 +30,11 @@ public class Bookmark {
     private boolean isFavorite = false;
     @CreationTimestamp
     private ZonedDateTime createdAt;
+    private String guestId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     public Bookmark(String originalUrl, String title, String description, String imgUrl){
         this.originalUrl = originalUrl;
