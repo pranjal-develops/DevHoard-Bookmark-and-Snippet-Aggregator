@@ -8,7 +8,7 @@ import { setBookmarks, setSelectedCategory, setSearchText } from '../store/slice
 export const useBookmarks = () => {
     const dispatch = useDispatch();
     const { selectedCategory, favoritesOnly, searchText } = useSelector((state: RootState) => state.bookmarks);
-
+    const { token } = useSelector((state: RootState) => state.auth);
     const [url, setUrl] = useState('');
     const [categories, setCategories] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,20 +21,20 @@ export const useBookmarks = () => {
                 if (selectedCategory) queryUrl += `&category=${selectedCategory}`;
                 if (favoritesOnly) queryUrl += `&favoritesOnly=${favoritesOnly}`;
 
-                const response = await axios.get(queryUrl);
+                const response = await axios.get(queryUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
                 dispatch(setBookmarks(response.data));
             } catch (error) {
                 console.log("Fetch Error:", error);
             }
         };
         fetchData();
-    }, [searchText, selectedCategory, favoritesOnly, refreshSignal, dispatch]);
+    }, [searchText, selectedCategory, favoritesOnly, refreshSignal, dispatch, token]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            await axios.post("http://localhost:8080/api/bookmarks", { url, categories });
+            await axios.post("http://localhost:8080/api/bookmarks", { url, categories }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
             dispatch(setShowToast(true));
             setTimeout(() => setRefreshSignal(val => !val), 3000);
             setTimeout(() => {
