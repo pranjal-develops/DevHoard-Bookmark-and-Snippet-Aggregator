@@ -33,8 +33,9 @@ export const useBookmarks = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+        const guestId = localStorage.getItem('guestId');
         try {
-            await axios.post("http://localhost:8080/api/bookmarks", { url, categories }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+            await axios.post("http://localhost:8080/api/bookmarks", { url, categories, guestId }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
             dispatch(setShowToast(true));
             setTimeout(() => setRefreshSignal(val => !val), 3000);
             setTimeout(() => {

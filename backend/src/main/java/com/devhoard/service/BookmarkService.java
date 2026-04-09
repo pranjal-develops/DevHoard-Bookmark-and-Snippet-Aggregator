@@ -1,12 +1,17 @@
 package com.devhoard.service;
 
 import com.devhoard.entities.Bookmark;
+import com.devhoard.entities.User;
 import com.devhoard.repository.BookmarkRepo;
+import com.devhoard.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.jsoup.HttpStatusException;
 import org.openqa.selenium.WebDriver;
@@ -26,9 +31,10 @@ import java.util.Set;
 public class BookmarkService {
 
     private final BookmarkRepo bookmarkRepo;
+    private final UserRepo userRepo;
 
     @Async
-    public void scrapeAndSave(String url, Set<String> categories) {
+    public void scrapeAndSave(String url, Set<String> categories, String guestId) {
         Document document = null;
         // Use Old Reddit for scraping (it has better metadata for bots)
         String scrapeUrl = url;
@@ -78,14 +84,28 @@ public class BookmarkService {
             String title = document.title();
             String description = firstNonEmpty(document, "meta[name=description]", "meta[property=og:description]");
             Bookmark bookmark = new Bookmark(url, title, description, imgUrl, categories);
+
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if(auth !=null && auth.isAuthenticated()){
+                User user = userRepo.findByUsername(auth.getName()).orElse(null);
+                bookmark.setUser(user);
+            } else{
+                bookmark.setGuestId(guestId);
+            }
+
             bookmarkRepo.save(bookmark);
         } catch (Exception e) {
-            throw new RuntimeException("An error occurred while saving the entity", e);
+            e.printStackTrace();
+            throw new RuntimeException("An error occurred while saving the entity" + e.getMessage(), e);
         }
     }
 
-    public void deleteBookmark(Long id) {
-        bookmarkRepo.deleteById(id);
+    public void deleteBookmark(Long id, String guestId) {
+        Bookmark bookmark = bookmarkRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Bookmark not found"));
+        verifyOwnership(bookmark, guestId);
+        bookmarkRepo.deleteById(id)
+        ;
     }
 
     public List<Bookmark> search(String keyword) {
@@ -100,16 +120,18 @@ public class BookmarkService {
         return bookmarkRepo.findByCategoriesContaining(category);
     }
 
-    public Bookmark updateCategory(Long id, Set<String> categories) {
+    public Bookmark updateCategory(Long id, Set<String> categories, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
+        verifyOwnership(bookmark, guestId);
         bookmark.setCategories(categories);
         return bookmarkRepo.save(bookmark);
     }
 
-    public Bookmark toggleFavorite(Long id) {
+    public Bookmark toggleFavorite(Long id, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
+        verifyOwnership(bookmark, guestId);
         bookmark.setFavorite(!bookmark.isFavorite());
         return bookmarkRepo.save(bookmark);
     }
@@ -181,6 +203,8 @@ public class BookmarkService {
     }
 
     private Document scrapeWithSelenium(String url) {
+        long startTime = System.currentTimeMillis(); //  Start the stopwatch
+
         // 1. Setup the invisible Chrome driver
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless=new"); // Runs without a window & Use the 'new' headless engine
@@ -203,21 +227,49 @@ public class BookmarkService {
         options.addArguments("--no-sandbox");
         options.addArguments("--blink-settings=imagesEnabled=true");
         options.addArguments("--incognito");
+        // Stop ads and tracking scripts from stealing your CPU/Time
+        options.addArguments("--disable-extensions");
+        options.addArguments("--disable-gpu");
+        options.addArguments("--no-sandbox");
+
         // ⚡ THE EAGER STRATEGY: Stop waiting once the basic HTML is loaded!
-        // options.setPageLoadStrategy(PageLoadStrategy.EAGER);
+//         options.setPageLoadStrategy(PageLoadStrategy.EAGER);
+        options.setPageLoadStrategy(PageLoadStrategy.NONE);
 
         WebDriver driver = new ChromeDriver(options);
         try {
             // 2. Visit the site and wait for Cloudflare
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(20));
             driver.get(url);
 
             // Wait up to 20 seconds, but continue the INSTANT the title is no longer "Just
             // a moment"
-            new WebDriverWait(driver, Duration.ofSeconds(20))
+//            new WebDriverWait(driver, Duration.ofSeconds(120))
                     // .until(ExpectedConditions.not(ExpectedConditions.titleContains("Just a
                     // moment")));
-                    .until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.tagName("body")));
+//                    .until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.tagName("body")));
+
+            // Inside your scrapeWithSelenium method:
+            driver.get(url); // This now returns INSTANTLY because of Strategy.NONE
+
+            startTime = System.currentTimeMillis();
+            while (System.currentTimeMillis() - startTime < 10000) { // Max 10 seconds
+                String title = driver.getTitle();
+                String source = driver.getPageSource();
+
+                // 🔱 THE SUCCESS CONDITION: We have the Title and at least some Meta tags
+                if (title != null && !title.isEmpty() && source.contains("<meta")) {
+                    // 🛑 STOP EVERYTHING: Tell the browser to kill all pending ads/scripts
+                    ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("window.stop();");
+                    break;
+                }
+                Thread.sleep(500); // Wait a tiny bit and check again
+            }
+
+
+//            new WebDriverWait(driver, Duration.ofSeconds(10))
+//                    .until(d -> !d.getTitle().isEmpty()); //  Stop as soon as the title exists!
+
 
             try {
                 Thread.sleep(2000);
@@ -227,10 +279,35 @@ public class BookmarkService {
             // 3. Extract the final rendered HTML and convert it back to a JSoup Document
             String html = driver.getPageSource();
             return Jsoup.parse(html, url);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         } finally {
             // 4. CRITICAL: Always close the browser or your RAM will fill up!
             driver.quit();
+            long duration = System.currentTimeMillis() - startTime; // 🏁 Calculate
+            System.out.println("あ! [Scraper] Successfully saved " + url + " in " + duration + "ms");
         }
     }
+
+    private void verifyOwnership(Bookmark bookmark, String guestId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        //1. ADOPTION POLICY: If it has NO guestId and NO user, it's an orphan. In this case, we allow the action, and we'll "Adopt" it in the calling method.
+        if (bookmark.getGuestId() == null && bookmark.getUser() == null) {
+            return;
+        }
+
+        // 2. If User is logged in, they MUST be the owner
+        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+            if (bookmark.getUser() == null || !bookmark.getUser().getUsername().equals(auth.getName())) {
+                throw new RuntimeException("Access Denied: You do not own this bookmark!");
+            }
+        }
+        // 3. If Guest, the guestId MUST match
+        else if (bookmark.getGuestId() == null || !bookmark.getGuestId().equals(guestId)) {
+            throw new RuntimeException("Access Denied: Identity mismatch!");
+        }
+    }
+
 
 }

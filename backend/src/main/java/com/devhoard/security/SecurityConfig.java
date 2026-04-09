@@ -38,9 +38,12 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll() // Open the "Entry Portal"
-                        .requestMatchers(HttpMethod.GET, "/api/bookmarks/**").permitAll() // Open the "Public Beach"
+//                        .requestMatchers(HttpMethod.GET, "/api/bookmarks/**").permitAll() // Open the "Public Beach"
+                        .requestMatchers( "/api/bookmarks/**").permitAll() // Allow all the methods instead of just GET
+
                         .anyRequest().authenticated() // LOCK EVERYTHING ELSE!
                 )
+
 
                 // 🛂 "Put my Guard in front of the Standard Spring Guard"
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

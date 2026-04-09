@@ -26,7 +26,7 @@ public class BookmarkController {
             String url = payload.getUrl();
             Set<String> categories = payload.getCategories();
 //            if(categories == null || categories.isEmpty()) categories = new HashSet<>(Collections.singletonList("Uncategorized"));
-            bookmarkService.scrapeAndSave(url, categories);
+            bookmarkService.scrapeAndSave(url, categories, payload.getGuestId());
         }   catch (Exception e)  {
             throw new RuntimeException("An error has occurred:", e);
         }
@@ -43,19 +43,19 @@ public class BookmarkController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteBookmark(@PathVariable Long id){
-        bookmarkService.deleteBookmark(id);
+    public void deleteBookmark(@PathVariable Long id, @RequestParam String guestId){
+        bookmarkService.deleteBookmark(id, guestId);
     }
 
     @PatchMapping("/{id}/category")
     public Bookmark updateCategory(@PathVariable Long id,@Valid @RequestBody BookmarkRequest payload) {
         Set<String> newCategories = payload.getCategories();
-        return bookmarkService.updateCategory(id, newCategories);
+        return bookmarkService.updateCategory(id, newCategories, payload.getGuestId());
     }
 
     @PatchMapping("/{id}/favorite")
-    public Bookmark toggleFavorite(@PathVariable Long id) {
-        return bookmarkService.toggleFavorite(id);
+    public Bookmark toggleFavorite(@PathVariable Long id, @Valid @RequestBody BookmarkRequest payload) {
+        return bookmarkService.toggleFavorite(id, payload.getGuestId());
     }
 
 }

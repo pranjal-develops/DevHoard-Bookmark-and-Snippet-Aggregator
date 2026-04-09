@@ -8,4 +8,5 @@ public class BookmarkRequest {
 
     public String url;
     public Set<String> categories;
+    private String guestId;
 }

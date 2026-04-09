@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
 import { useSelector } from 'react-redux';
 import { type RootState } from '../store';
+import AuthModal from '../components/AuthModal';
 
 interface Bookmark {
     id: string;
@@ -23,6 +24,7 @@ export default function App() {
     return (
         <div className={`${isDark ? 'dark' : ''} h-screen overflow-hidden font-sans`}>
             <Navbar />
+            <AuthModal />
             <div className="flex h-full bg-zinc-50 text-zinc-900 transition-colors duration-300 dark:bg-[hsl(0,0%,3%)] dark:text-zinc-100">
 
                 <Sidebar />
