@@ -21,7 +21,7 @@ const UrlForm = () => {
                 isSubmitting ? (
                     <button
                         type="submit"
-                        className="px-8 py-4 bg-lime-600 dark:bg-lime-500 dark:hover:bg-lime-400 dark:text-black hover:bg-lime-500 text-white font-bold tracking-wider rounded-xl shadow-[0_0_15px_rgba(5,150,105,0.4)] hover:shadow-[0_0_25px_rgba(5,150,105,0.6)] transition-all active:scale-95 uppercase text-sm animate-pulse"
+                        className="px-8 py-4 bg-lime-500 hover:bg-lime-400 text-black font-bold tracking-wider rounded-xl shadow-[0_0_15px_rgba(5,150,105,0.4)] hover:shadow-[0_0_25px_rgba(5,150,105,0.6)] transition-all active:scale-95 uppercase text-sm animate-pulse"
                     >
                         Scrapeing...
                     </button>
@@ -30,7 +30,7 @@ const UrlForm = () => {
                     (
                         <button
                             type="submit"
-                            className="px-8 py-4 bg-lime-600 dark:bg-lime-500 dark:hover:bg-lime-400 dark:text-black hover:bg-lime-500 text-white font-bold tracking-wider rounded-xl shadow-[0_0_15px_rgba(5,150,105,0.4)] hover:shadow-[0_0_25px_rgba(5,150,105,0.6)] transition-all active:scale-95 uppercase text-sm"
+                            className="px-8 py-4 bg-lime-500 hover:bg-lime-400 text-white dark:text-black font-bold tracking-wider rounded-xl shadow-[0_0_15px_rgba(5,150,105,0.4)] hover:shadow-[0_0_25px_rgba(5,150,105,0.6)] transition-all active:scale-95 uppercase text-sm"
                         >
                             Scrape!
                         </button>
