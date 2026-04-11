@@ -6,6 +6,8 @@ import com.devhoard.service.BookmarkService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.awt.print.Book;
@@ -23,10 +25,20 @@ public class BookmarkController {
     @ResponseStatus(HttpStatus.CREATED)
     public void saveBookmark(@Valid @RequestBody BookmarkRequest payload){
         try {
-            String url = payload.getUrl();
-            Set<String> categories = payload.getCategories();
-//            if(categories == null || categories.isEmpty()) categories = new HashSet<>(Collections.singletonList("Uncategorized"));
-            bookmarkService.scrapeAndSave(url, categories, payload.getGuestId());
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String username = null;
+                   if (auth!=null
+                           && auth.isAuthenticated()
+                           && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+                                Object principal = auth.getPrincipal();
+                                if (principal instanceof com.devhoard.entities.User) {
+                                    username = ((com.devhoard.entities.User) principal).getUsername();
+                                } else {
+                                    username = auth.getName();
+                                }
+                   }
+            System.out.println("🛰️ [Identity Handover] User: " + username + " | GuestId: " + payload.getGuestId());
+            bookmarkService.scrapeAndSave(payload.getUrl(), payload.getCategories(), payload.getGuestId(), username);
         }   catch (Exception e)  {
             throw new RuntimeException("An error has occurred:", e);
         }
@@ -34,11 +46,23 @@ public class BookmarkController {
 
 
     @GetMapping
-    public List<Bookmark> getBookmarks(@RequestParam(required = false) String q, @RequestParam(required = false)String category, @RequestParam(defaultValue = "false") boolean favoritesOnly){
-        if (favoritesOnly) return bookmarkService.getFavorites();
-        if(category!=null && !category.isBlank()) return bookmarkService.getByCategory(category);
-        if(q == null  || q.isBlank()) return bookmarkService.getAll();
-        return bookmarkService.search(q);
+    public List<Bookmark> getBookmarks(@RequestParam(required = false) String q, @RequestParam(required = false)String category, @RequestParam(defaultValue = "false") boolean favoritesOnly, @RequestParam String guestId){
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = null;
+        if (auth != null && auth.isAuthenticated() &&
+                !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+            Object principal = auth.getPrincipal();
+            if (principal instanceof com.devhoard.entities.User) {
+                username = ((com.devhoard.entities.User) principal).getUsername();
+            } else {
+                username = auth.getName();
+            }
+        }
+        if (favoritesOnly) return bookmarkService.getFavorites(username, guestId);
+        if(category!=null && !category.isBlank()) return bookmarkService.getByCategory(category, username, guestId);
+        if(q == null  || q.isBlank()) return bookmarkService.getAll(username, guestId);
+        return bookmarkService.search(q, username, guestId);
     }
 
     @DeleteMapping("/{id}")

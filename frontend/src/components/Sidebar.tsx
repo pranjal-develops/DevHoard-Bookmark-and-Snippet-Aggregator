@@ -37,7 +37,11 @@ const Sidebar = () => {
                         Collections_Node
                     </div>
                     <button
-                        onClick={() => dispatch(setSelectedCategory(null))}
+                        onClick={() => {
+                            dispatch(setSelectedCategory(null));
+                            dispatch(setFavoritesOnly(false));
+                        }}
+
                         className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg font-mono text-xs transition-all ${!selectedCategory ? 'text-lime-500 bg-lime-500/10' : 'text-zinc-500 hover:text-white'}`}
                     >
                         [ ALL_COLLECTIONS ]

@@ -6,6 +6,7 @@ import Toast from '../components/Toast';
 import { useSelector } from 'react-redux';
 import { type RootState } from '../store';
 import AuthModal from '../components/AuthModal';
+import { useFetchData } from '../hooks/useFetchData';
 
 interface Bookmark {
     id: string;
@@ -20,6 +21,7 @@ interface Bookmark {
 export default function App() {
     const { isDark, showToast } = useSelector((state: RootState) => state.ui);
     const { items } = useSelector((state: RootState) => state.bookmarks);
+    useFetchData();
 
     return (
         <div className={`${isDark ? 'dark' : ''} h-screen overflow-hidden font-sans`}>

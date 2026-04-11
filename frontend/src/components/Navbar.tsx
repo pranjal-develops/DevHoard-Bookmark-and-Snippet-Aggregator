@@ -4,11 +4,13 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
 import { useDispatch } from 'react-redux';
 import { toggleTheme, toggleSidebar, openAuth } from '../store/slices/uiSlice';
+import { logout } from '../store/slices/authSlice';
 
 const Navbar = () => {
 
     const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
     const { isDark } = useSelector((state: RootState) => state.ui);
+    const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch();
 
 
@@ -48,7 +50,7 @@ const Navbar = () => {
 
                     <div className="hidden xl:block text-[10px] font-mono text-zinc-400 dark:text-zinc-600 uppercase tracking-widest leading-none">
                         Auth_status:
-                        <span className="text-lime-500 block">Guest</span>
+                        <span className="text-lime-500 block">{user || 'Guest'}</span>
                     </div>
 
                     <div className="flex flex-row gap-2">
@@ -64,12 +66,23 @@ const Navbar = () => {
                                 )}
                             </span>
                         </button>
-                        <button
-                            onClick={() => dispatch(openAuth('login'))}
-                            className="px-4 py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-widest bg-lime-500 text-black hover:bg-lime-400 transition-all active:scale-95 shadow-[0_0_15px_rgba(132,204,22,0.3)]"
-                        >
+                        {isAuthenticated ? (
+                            <button
+                                onClick={() => dispatch(logout())}
+                                className="px-4 py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-widest bg-lime-500 text-black hover:bg-lime-400 transition-all active:scale-95 shadow-[0_0_15px_rgba(132,204,22,0.3)]"
+                            >
+                            // LOGOUT
+                            </button>
+                        ) :
+                            (
+                                <button
+                                    onClick={() => dispatch(openAuth('login'))}
+                                    className="px-4 py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-widest bg-lime-500 text-black hover:bg-lime-400 transition-all active:scale-95 shadow-[0_0_15px_rgba(132,204,22,0.3)]"
+                                >
                             // LOGIN
-                        </button>
+                                </button>
+                            )
+                        }
                     </div>
                 </div>
             </div>

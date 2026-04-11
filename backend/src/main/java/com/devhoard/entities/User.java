@@ -29,5 +29,6 @@ public class User {
     private String password;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore // This breaks the circular JSON loop of user and bookmarks being provided by the backend!
     private List<Bookmark> bookmarks;
 }

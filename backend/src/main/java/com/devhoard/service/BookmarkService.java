@@ -34,7 +34,7 @@ public class BookmarkService {
     private final UserRepo userRepo;
 
     @Async
-    public void scrapeAndSave(String url, Set<String> categories, String guestId) {
+    public void scrapeAndSave(String url, Set<String> categories, String guestId, String username) {
         Document document = null;
         // Use Old Reddit for scraping (it has better metadata for bots)
         String scrapeUrl = url;
@@ -85,9 +85,8 @@ public class BookmarkService {
             String description = firstNonEmpty(document, "meta[name=description]", "meta[property=og:description]");
             Bookmark bookmark = new Bookmark(url, title, description, imgUrl, categories);
 
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if(auth !=null && auth.isAuthenticated()){
-                User user = userRepo.findByUsername(auth.getName()).orElse(null);
+            if(username !=null){
+                User user = userRepo.findByUsername(username).orElse(null);
                 bookmark.setUser(user);
             } else{
                 bookmark.setGuestId(guestId);
@@ -108,16 +107,14 @@ public class BookmarkService {
         ;
     }
 
-    public List<Bookmark> search(String keyword) {
-        return bookmarkRepo.findByTitleContainingIgnoreCase(keyword);
+    public List<Bookmark> search(String keyword, String username, String guestId) {
+        return bookmarkRepo.searchByOwner(username, guestId, keyword);
     }
-
-    public List<Bookmark> getAll() {
-        return bookmarkRepo.findAll();
+    public List<Bookmark> getAll(String username, String guestId) {
+        return bookmarkRepo.findByOwner(username, guestId);
     }
-
-    public List<Bookmark> getByCategory(String category) {
-        return bookmarkRepo.findByCategoriesContaining(category);
+    public List<Bookmark> getByCategory(String category, String username, String guestId) {
+        return bookmarkRepo.findByCategoryAndOwner(username, guestId, category);
     }
 
     public Bookmark updateCategory(Long id, Set<String> categories, String guestId) {
@@ -137,8 +134,8 @@ public class BookmarkService {
     }
 
     // Add a helper for the controller too
-    public List<Bookmark> getFavorites() {
-        return bookmarkRepo.findByIsFavoriteTrue();
+    public List<Bookmark> getFavorites(String username, String guestId) {
+        return bookmarkRepo.findFavoritesByOwner(username, guestId);
     }
 
     // private static String firstNonEmpty(Document doc, String... cssQueries) {
@@ -291,22 +288,40 @@ public class BookmarkService {
 
     private void verifyOwnership(Bookmark bookmark, String guestId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        //1. ADOPTION POLICY: If it has NO guestId and NO user, it's an orphan. In this case, we allow the action, and we'll "Adopt" it in the calling method.
-        if (bookmark.getGuestId() == null && bookmark.getUser() == null) {
-            return;
+        String username = null;
+        if (auth!=null
+                && auth.isAuthenticated()
+                && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+            Object principal = auth.getPrincipal();
+            if (principal instanceof com.devhoard.entities.User) {
+                username = ((com.devhoard.entities.User) principal).getUsername();
+            } else {
+                username = auth.getName();
+            }
+        }
+        // 1. If the bookmark belongs to a USER...
+        if (bookmark.getUser() != null) {
+            if (username == null || !bookmark.getUser().getUsername().equals(username)) {
+                throw new RuntimeException("Access Denied: Not your archive!");
+            }
+        }
+        else {
+            // Only allow if the guestId matches and the User isn't trying to hijack a guest
+            if (!bookmark.getGuestId().equals(guestId)) {
+                throw new RuntimeException("Access Denied: Identity mismatch!");
+            }
         }
 
         // 2. If User is logged in, they MUST be the owner
-        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
-            if (bookmark.getUser() == null || !bookmark.getUser().getUsername().equals(auth.getName())) {
-                throw new RuntimeException("Access Denied: You do not own this bookmark!");
-            }
-        }
-        // 3. If Guest, the guestId MUST match
-        else if (bookmark.getGuestId() == null || !bookmark.getGuestId().equals(guestId)) {
-            throw new RuntimeException("Access Denied: Identity mismatch!");
-        }
+//        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+//            if (bookmark.getUser() == null || !bookmark.getUser().getUsername().equals(auth.getName())) {
+//                throw new RuntimeException("Access Denied: You do not own this bookmark!");
+//            }
+//        }
+//        // 3. If Guest, the guestId MUST match
+//        else if (bookmark.getGuestId() == null || !bookmark.getGuestId().equals(guestId)) {
+//            throw new RuntimeException("Access Denied: Identity mismatch!");
+//        }
     }
 
 

@@ -4,14 +4,16 @@ interface BookmarkState {
     items: any[];
     selectedCategory: string | null;
     favoritesOnly: boolean;
-    searchText: string
+    searchText: string;
+    updateSignal: boolean;
 }
 
 const initialState: BookmarkState = {
     items: [],
     selectedCategory: null,
     favoritesOnly: false,
-    searchText: ""
+    searchText: "",
+    updateSignal: false
 }
 
 export const BookmarkState = createSlice({
@@ -29,9 +31,12 @@ export const BookmarkState = createSlice({
         },
         setSearchText: (state, action: PayloadAction<string>) => {
             state.searchText = action.payload;
+        },
+        triggerRefresh: (state) => {
+            state.updateSignal = !state.updateSignal;
         }
     }
 })
 
-export const { setBookmarks, setSelectedCategory, setFavoritesOnly, setSearchText } = BookmarkState.actions;
+export const { setBookmarks, setSelectedCategory, setFavoritesOnly, setSearchText, triggerRefresh } = BookmarkState.actions;
 export default BookmarkState.reducer;  

@@ -37,6 +37,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 3. "No Memory" mode
 
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll() // Open the "Entry Portal"
 //                        .requestMatchers(HttpMethod.GET, "/api/bookmarks/**").permitAll() // Open the "Public Beach"
                         .requestMatchers( "/api/bookmarks/**").permitAll() // Allow all the methods instead of just GET
