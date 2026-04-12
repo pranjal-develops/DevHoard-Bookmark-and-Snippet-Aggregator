@@ -33,25 +33,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            String username = jwtUtils.getUsernameFromToken(token);
+            try {
+                String username = jwtUtils.getUsernameFromToken(token);
 
-            // 👮‍♂️ Check if the Bulletin Board is empty for this request
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // 👮‍♂️ Check if the Bulletin Board is empty for this request
+                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // 🔎 Find the user in the database
-                User user = userRepo.findByUsername(username).orElse(null);
+                    // 🔎 Find the user in the database
+                    User user = userRepo.findByUsername(username).orElse(null);
 
-                if (user != null) {
-                    // 🎫 THE IDENTITY CERTIFICATE:
-                    // We create a "Security Token" that contains the user details and their permissions.
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            user, null, new ArrayList<>() // Empty list of roles for now
-                    );
+                    if (user != null) {
+                        // 🎫 THE IDENTITY CERTIFICATE:
+                        // We create a "Security Token" that contains the user details and their permissions.
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                user, null, new ArrayList<>() // Empty list of roles for now
+                        );
 
-                    // 📌 THE BULLETIN BOARD:
-                    // We post the certificate so the controllers know who is signed in!
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                        // 📌 THE BULLETIN BOARD:
+                        // We post the certificate so the controllers know who is signed in!
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
                 }
+            }catch (io.jsonwebtoken.ExpiredJwtException e) {
+                response.setHeader("X-Session-Expiry", "true");
+                System.out.println(" [Security Service] Session expired. Falling back to Guest mode.");
+            }catch (Exception e){
+                System.out.println("[Security Service] Invalid token intercepted.");
             }
         }
 

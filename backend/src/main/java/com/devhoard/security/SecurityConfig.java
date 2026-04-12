@@ -39,9 +39,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll() // Open the "Entry Portal"
-                        .requestMatchers(HttpMethod.GET, "/api/bookmarks/**").permitAll() // Open the "Public Beach"
-                                .requestMatchers("/api/bookmarks/**").authenticated() // Mutation (Delete/Patch/Post)
-//                        .requestMatchers( "/api/bookmarks/**").permitAll() // Allow all the methods instead of just GET
+//                        .requestMatchers(HttpMethod.GET, "/api/bookmarks/**").permitAll() // Open the "Public Beach"
+//                                .requestMatchers("/api/bookmarks/**").authenticated() // Mutation (Delete/Patch/Post)
+                        .requestMatchers( "/api/bookmarks/**").permitAll() // Allow all the methods instead of just GET
 
                         .anyRequest().authenticated() // LOCK EVERYTHING ELSE!
                 )
@@ -65,6 +65,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of("http://localhost:5173"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setExposedHeaders(List.of("X-Session-Expiry")); // Tell the browser it is okay for React to read this specific header
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

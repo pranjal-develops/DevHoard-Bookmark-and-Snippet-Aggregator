@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { type RootState } from '../store';
 import { setBookmarks } from '../store/slices/bookmarksSlice';
+import api from '../api/api';
 
 export const useFetchData = () => {
     const dispatch = useDispatch();
@@ -17,7 +17,7 @@ export const useFetchData = () => {
                 if (selectedCategory) queryUrl += `&category=${selectedCategory}`;
                 if (favoritesOnly) queryUrl += `&favoritesOnly=${favoritesOnly}`;
 
-                const response = await axios.get(queryUrl, {
+                const response = await api.get(queryUrl, {
                     headers: token ? { Authorization: `Bearer ${token}` } : {}
                 });
                 dispatch(setBookmarks(response.data));
