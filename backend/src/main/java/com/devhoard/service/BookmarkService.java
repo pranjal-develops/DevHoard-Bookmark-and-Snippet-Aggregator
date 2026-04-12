@@ -99,10 +99,10 @@ public class BookmarkService {
         }
     }
 
-    public void deleteBookmark(Long id, String guestId) {
+    public void deleteBookmark(Long id, String username ,String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
-        verifyOwnership(bookmark, guestId);
+        verifyOwnership(bookmark, username, guestId);
         bookmarkRepo.deleteById(id)
         ;
     }
@@ -117,18 +117,18 @@ public class BookmarkService {
         return bookmarkRepo.findByCategoryAndOwner(username, guestId, category);
     }
 
-    public Bookmark updateCategory(Long id, Set<String> categories, String guestId) {
+    public Bookmark updateCategory(Long id, Set<String> categories, String username, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
-        verifyOwnership(bookmark, guestId);
+        verifyOwnership(bookmark,username, guestId);
         bookmark.setCategories(categories);
         return bookmarkRepo.save(bookmark);
     }
 
-    public Bookmark toggleFavorite(Long id, String guestId) {
+    public Bookmark toggleFavorite(Long id, String username, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
-        verifyOwnership(bookmark, guestId);
+        verifyOwnership(bookmark, username , guestId);
         bookmark.setFavorite(!bookmark.isFavorite());
         return bookmarkRepo.save(bookmark);
     }
@@ -285,44 +285,20 @@ public class BookmarkService {
             System.out.println("あ! [Scraper] Successfully saved " + url + " in " + duration + "ms");
         }
     }
-
-    private void verifyOwnership(Bookmark bookmark, String guestId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = null;
-        if (auth!=null
-                && auth.isAuthenticated()
-                && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
-            Object principal = auth.getPrincipal();
-            if (principal instanceof com.devhoard.entities.User) {
-                username = ((com.devhoard.entities.User) principal).getUsername();
-            } else {
-                username = auth.getName();
-            }
-        }
-        // 1. If the bookmark belongs to a USER...
+    private void verifyOwnership(Bookmark bookmark, String username, String guestId) {
+        // 1. If it belongs to a User, the name must match
         if (bookmark.getUser() != null) {
             if (username == null || !bookmark.getUser().getUsername().equals(username)) {
                 throw new RuntimeException("Access Denied: Not your archive!");
             }
         }
-        else {
-            // Only allow if the guestId matches and the User isn't trying to hijack a guest
-            if (!bookmark.getGuestId().equals(guestId)) {
-                throw new RuntimeException("Access Denied: Identity mismatch!");
-            }
+        // 2. If it's a Guest bookmark, the guestId must match
+        else if (bookmark.getGuestId() == null || !bookmark.getGuestId().equals(guestId)) {
+            throw new RuntimeException("Access Denied: Identity mismatch!");
         }
-
-        // 2. If User is logged in, they MUST be the owner
-//        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
-//            if (bookmark.getUser() == null || !bookmark.getUser().getUsername().equals(auth.getName())) {
-//                throw new RuntimeException("Access Denied: You do not own this bookmark!");
-//            }
-//        }
-//        // 3. If Guest, the guestId MUST match
-//        else if (bookmark.getGuestId() == null || !bookmark.getGuestId().equals(guestId)) {
-//            throw new RuntimeException("Access Denied: Identity mismatch!");
-//        }
     }
+
+
 
 
 }

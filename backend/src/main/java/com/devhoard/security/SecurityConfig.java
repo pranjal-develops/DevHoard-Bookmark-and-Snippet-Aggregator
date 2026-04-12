@@ -39,8 +39,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll() // Open the "Entry Portal"
-//                        .requestMatchers(HttpMethod.GET, "/api/bookmarks/**").permitAll() // Open the "Public Beach"
-                        .requestMatchers( "/api/bookmarks/**").permitAll() // Allow all the methods instead of just GET
+                        .requestMatchers(HttpMethod.GET, "/api/bookmarks/**").permitAll() // Open the "Public Beach"
+                                .requestMatchers("/api/bookmarks/**").authenticated() // Mutation (Delete/Patch/Post)
+//                        .requestMatchers( "/api/bookmarks/**").permitAll() // Allow all the methods instead of just GET
 
                         .anyRequest().authenticated() // LOCK EVERYTHING ELSE!
                 )

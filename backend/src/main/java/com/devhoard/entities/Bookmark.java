@@ -56,4 +56,15 @@ public class Bookmark {
         this.isFavorite = false;
     }
 
+    public Bookmark(String originalUrl, String title, String description, String imgUrl, String guestId, Set<String> categories){
+        this.originalUrl = originalUrl;
+        this.title = title;
+        this.description = description;
+        this.imgUrl = imgUrl;
+        this.guestId = guestId;
+        this.categories = categories;
+        this.createdAt = ZonedDateTime.now();
+        this.isFavorite = false;
+    }
+
 }

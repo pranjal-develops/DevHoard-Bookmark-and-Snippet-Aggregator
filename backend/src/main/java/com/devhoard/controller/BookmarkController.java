@@ -48,17 +48,19 @@ public class BookmarkController {
     @GetMapping
     public List<Bookmark> getBookmarks(@RequestParam(required = false) String q, @RequestParam(required = false)String category, @RequestParam(defaultValue = "false") boolean favoritesOnly, @RequestParam String guestId){
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = null;
-        if (auth != null && auth.isAuthenticated() &&
-                !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
-            Object principal = auth.getPrincipal();
-            if (principal instanceof com.devhoard.entities.User) {
-                username = ((com.devhoard.entities.User) principal).getUsername();
-            } else {
-                username = auth.getName();
-            }
-        }
+//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+//        String username = null;
+//        if (auth != null && auth.isAuthenticated() &&
+//                !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+//            Object principal = auth.getPrincipal();
+//            if (principal instanceof com.devhoard.entities.User) {
+//                username = ((com.devhoard.entities.User) principal).getUsername();
+//            } else {
+//                username = auth.getName();
+//            }
+//        }
+
+        String username = extractUsername();
         if (favoritesOnly) return bookmarkService.getFavorites(username, guestId);
         if(category!=null && !category.isBlank()) return bookmarkService.getByCategory(category, username, guestId);
         if(q == null  || q.isBlank()) return bookmarkService.getAll(username, guestId);
@@ -68,18 +70,35 @@ public class BookmarkController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteBookmark(@PathVariable Long id, @RequestParam String guestId){
-        bookmarkService.deleteBookmark(id, guestId);
+        String username = extractUsername();
+        bookmarkService.deleteBookmark(id, username,guestId);
     }
 
     @PatchMapping("/{id}/category")
     public Bookmark updateCategory(@PathVariable Long id,@Valid @RequestBody BookmarkRequest payload) {
         Set<String> newCategories = payload.getCategories();
-        return bookmarkService.updateCategory(id, newCategories, payload.getGuestId());
+        String username = extractUsername();
+        return bookmarkService.updateCategory(id, newCategories, username,payload.getGuestId());
     }
 
     @PatchMapping("/{id}/favorite")
     public Bookmark toggleFavorite(@PathVariable Long id, @Valid @RequestBody BookmarkRequest payload) {
-        return bookmarkService.toggleFavorite(id, payload.getGuestId());
+        String username = extractUsername();
+        return bookmarkService.toggleFavorite(id,username, payload.getGuestId());
+    }
+
+    private String extractUsername(){
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() &&
+                !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+            Object principal = auth.getPrincipal();
+            if (principal instanceof com.devhoard.entities.User) {
+                return ((com.devhoard.entities.User) principal).getUsername();
+            } else {
+                return auth.getName();
+            }
+        }
+        return null;
     }
 
 }
