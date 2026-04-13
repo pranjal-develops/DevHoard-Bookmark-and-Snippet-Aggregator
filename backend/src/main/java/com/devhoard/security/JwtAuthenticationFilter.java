@@ -15,7 +15,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import java.util.ArrayList; // For the empty authorities
 
-
 import java.io.IOException;
 
 @Component
@@ -54,10 +53,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                     }
                 }
-            }catch (io.jsonwebtoken.ExpiredJwtException e) {
+            } catch (io.jsonwebtoken.ExpiredJwtException e) {
                 response.setHeader("X-Session-Expiry", "true");
                 System.out.println(" [Security Service] Session expired. Falling back to Guest mode.");
-            }catch (Exception e){
+            } catch (Exception e) {
                 System.out.println("[Security Service] Invalid token intercepted.");
             }
         }
@@ -65,6 +64,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 🚀 Keep the line moving!
         filterChain.doFilter(request, response);
     }
-
 
 }
