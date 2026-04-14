@@ -4,7 +4,7 @@ import { logout } from '../store/slices/authSlice';
 
 // Create the centralized API instance
 const api = axios.create({
-    baseURL: 'http://localhost:8080/api',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
 });
 
 // THE WATCHER: Listen to every single response from the server

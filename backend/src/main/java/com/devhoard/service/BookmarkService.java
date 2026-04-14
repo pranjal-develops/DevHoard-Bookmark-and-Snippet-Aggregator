@@ -85,10 +85,10 @@ public class BookmarkService {
             String description = firstNonEmpty(document, "meta[name=description]", "meta[property=og:description]");
             Bookmark bookmark = new Bookmark(url, title, description, imgUrl, categories);
 
-            if(username !=null){
+            if (username != null) {
                 User user = userRepo.findByUsername(username).orElse(null);
                 bookmark.setUser(user);
-            } else{
+            } else {
                 bookmark.setGuestId(guestId);
             }
 
@@ -99,20 +99,21 @@ public class BookmarkService {
         }
     }
 
-    public void deleteBookmark(Long id, String username ,String guestId) {
+    public void deleteBookmark(Long id, String username, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
         verifyOwnership(bookmark, username, guestId);
-        bookmarkRepo.deleteById(id)
-        ;
+        bookmarkRepo.deleteById(id);
     }
 
     public List<Bookmark> search(String keyword, String username, String guestId) {
         return bookmarkRepo.searchByOwner(username, guestId, keyword);
     }
+
     public List<Bookmark> getAll(String username, String guestId) {
         return bookmarkRepo.findByOwner(username, guestId);
     }
+
     public List<Bookmark> getByCategory(String category, String username, String guestId) {
         return bookmarkRepo.findByCategoryAndOwner(username, guestId, category);
     }
@@ -120,7 +121,7 @@ public class BookmarkService {
     public Bookmark updateCategory(Long id, Set<String> categories, String username, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
-        verifyOwnership(bookmark,username, guestId);
+        verifyOwnership(bookmark, username, guestId);
         bookmark.setCategories(categories);
         return bookmarkRepo.save(bookmark);
     }
@@ -128,7 +129,7 @@ public class BookmarkService {
     public Bookmark toggleFavorite(Long id, String username, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bookmark not found"));
-        verifyOwnership(bookmark, username , guestId);
+        verifyOwnership(bookmark, username, guestId);
         bookmark.setFavorite(!bookmark.isFavorite());
         return bookmarkRepo.save(bookmark);
     }
@@ -174,7 +175,8 @@ public class BookmarkService {
         // Loop through images inside the actual question or post body
         for (org.jsoup.nodes.Element img : doc.select(".s-prose img, #question img, main img")) {
             String v = img.attr("abs:src");
-            if (isValidImage(v)) return v;
+            if (isValidImage(v))
+                return v;
         }
 
         // Stage 4: BRANDING FALLBACK
@@ -183,11 +185,10 @@ public class BookmarkService {
             return "https://cdn.sstatic.net/Sites/stackoverflow/Img/apple-touch-icon@2.png";
         }
 
-
         return "";
     }
 
-    //  THE QUALITY GUARD:
+    // THE QUALITY GUARD:
     private static boolean isValidImage(String url) {
         if (url == null || url.isEmpty())
             return false;
@@ -200,11 +201,16 @@ public class BookmarkService {
     }
 
     private Document scrapeWithSelenium(String url) {
-        long startTime = System.currentTimeMillis(); //  Start the stopwatch
+        long startTime = System.currentTimeMillis(); // Start the stopwatch
+
+        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
 
         // 1. Setup the invisible Chrome driver
         ChromeOptions options = new ChromeOptions();
+        options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--headless=new"); // Runs without a window & Use the 'new' headless engine
+        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--no-sandbox");
         options.addArguments("--disable-blink-features=AutomationControlled"); // Hides the "I am a robot" flag
         options.addArguments("--window-size=1920,1080"); // Pretend we have a big monitor
         // THE FAKE ID: This tricks Cloudflare into thinking you are a regular person on
@@ -230,7 +236,7 @@ public class BookmarkService {
         options.addArguments("--no-sandbox");
 
         // ⚡ THE EAGER STRATEGY: Stop waiting once the basic HTML is loaded!
-//         options.setPageLoadStrategy(PageLoadStrategy.EAGER);
+        // options.setPageLoadStrategy(PageLoadStrategy.EAGER);
         options.setPageLoadStrategy(PageLoadStrategy.NONE);
 
         WebDriver driver = new ChromeDriver(options);
@@ -241,10 +247,10 @@ public class BookmarkService {
 
             // Wait up to 20 seconds, but continue the INSTANT the title is no longer "Just
             // a moment"
-//            new WebDriverWait(driver, Duration.ofSeconds(120))
-                    // .until(ExpectedConditions.not(ExpectedConditions.titleContains("Just a
-                    // moment")));
-//                    .until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.tagName("body")));
+            // new WebDriverWait(driver, Duration.ofSeconds(120))
+            // .until(ExpectedConditions.not(ExpectedConditions.titleContains("Just a
+            // moment")));
+            // .until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.tagName("body")));
 
             // Inside your scrapeWithSelenium method:
             driver.get(url); // This now returns INSTANTLY because of Strategy.NONE
@@ -263,10 +269,8 @@ public class BookmarkService {
                 Thread.sleep(500); // Wait a tiny bit and check again
             }
 
-
-//            new WebDriverWait(driver, Duration.ofSeconds(10))
-//                    .until(d -> !d.getTitle().isEmpty()); //  Stop as soon as the title exists!
-
+            // new WebDriverWait(driver, Duration.ofSeconds(10))
+            // .until(d -> !d.getTitle().isEmpty()); // Stop as soon as the title exists!
 
             try {
                 Thread.sleep(2000);
@@ -285,6 +289,7 @@ public class BookmarkService {
             System.out.println("あ! [Scraper] Successfully saved " + url + " in " + duration + "ms");
         }
     }
+
     private void verifyOwnership(Bookmark bookmark, String username, String guestId) {
         // 1. If it belongs to a User, the name must match
         if (bookmark.getUser() != null) {
@@ -297,8 +302,5 @@ public class BookmarkService {
             throw new RuntimeException("Access Denied: Identity mismatch!");
         }
     }
-
-
-
 
 }
