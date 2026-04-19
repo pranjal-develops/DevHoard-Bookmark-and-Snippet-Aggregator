@@ -18,15 +18,22 @@ import java.util.ArrayList; // For the empty authorities
 import java.io.IOException;
 
 @Component
-@RequiredArgsConstructor
+// @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
     private final UserRepo userRepo;
 
+    public JwtAuthenticationFilter(JwtUtils jwtUtils, com.devhoard.repository.UserRepo userRepo) {
+        this.jwtUtils = jwtUtils;
+        this.userRepo = userRepo;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+        System.out.println("🛡️ [FILTER HEARTBEAT] Request intercepted: " + request.getMethod() + " " + request.getRequestURI());
 
         String authHeader = request.getHeader("Authorization");
 
@@ -43,7 +50,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     if (user != null) {
                         // 🎫 THE IDENTITY CERTIFICATE:
-                        // We create a "Security Token" that contains the user details and their permissions.
+                        // We create a "Security Token" that contains the user details and their
+                        // permissions.
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 user, null, new ArrayList<>() // Empty list of roles for now
                         );

@@ -16,78 +16,88 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/bookmarks")
-@CrossOrigin(origins = "http://localhost:5173")
-@RequiredArgsConstructor
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost"})
+// @RequiredArgsConstructor
 public class BookmarkController {
     private final BookmarkService bookmarkService;
 
+    public BookmarkController(BookmarkService bookmarkService) {
+        this.bookmarkService = bookmarkService;
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void saveBookmark(@Valid @RequestBody BookmarkRequest payload){
+    public void saveBookmark(@Valid @RequestBody BookmarkRequest payload) {
+        System.out.println("🛰️ [GATEKEEPER] POST Request Received for URL: " + payload.getUrl());
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = null;
-                   if (auth!=null
-                           && auth.isAuthenticated()
-                           && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
-                                Object principal = auth.getPrincipal();
-                                if (principal instanceof com.devhoard.entities.User) {
-                                    username = ((com.devhoard.entities.User) principal).getUsername();
-                                } else {
-                                    username = auth.getName();
-                                }
-                   }
+            if (auth != null
+                    && auth.isAuthenticated()
+                    && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+                Object principal = auth.getPrincipal();
+                if (principal instanceof com.devhoard.entities.User) {
+                    username = ((com.devhoard.entities.User) principal).getUsername();
+                } else {
+                    username = auth.getName();
+                }
+            }
             System.out.println("🛰️ [Identity Handover] User: " + username + " | GuestId: " + payload.getGuestId());
             bookmarkService.scrapeAndSave(payload.getUrl(), payload.getCategories(), payload.getGuestId(), username);
-        }   catch (Exception e)  {
+        } catch (Exception e) {
             throw new RuntimeException("An error has occurred:", e);
         }
     }
 
-
     @GetMapping
-    public List<Bookmark> getBookmarks(@RequestParam(required = false) String q, @RequestParam(required = false)String category, @RequestParam(defaultValue = "false") boolean favoritesOnly, @RequestParam String guestId){
+    public List<Bookmark> getBookmarks(@RequestParam(required = false) String q,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "false") boolean favoritesOnly, @RequestParam String guestId) {
 
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        String username = null;
-//        if (auth != null && auth.isAuthenticated() &&
-//                !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
-//            Object principal = auth.getPrincipal();
-//            if (principal instanceof com.devhoard.entities.User) {
-//                username = ((com.devhoard.entities.User) principal).getUsername();
-//            } else {
-//                username = auth.getName();
-//            }
-//        }
+        // Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        // String username = null;
+        // if (auth != null && auth.isAuthenticated() &&
+        // !(auth instanceof
+        // org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+        // Object principal = auth.getPrincipal();
+        // if (principal instanceof com.devhoard.entities.User) {
+        // username = ((com.devhoard.entities.User) principal).getUsername();
+        // } else {
+        // username = auth.getName();
+        // }
+        // }
 
         String username = extractUsername();
-        if (favoritesOnly) return bookmarkService.getFavorites(username, guestId);
-        if(category!=null && !category.isBlank()) return bookmarkService.getByCategory(category, username, guestId);
-        if(q == null  || q.isBlank()) return bookmarkService.getAll(username, guestId);
+        if (favoritesOnly)
+            return bookmarkService.getFavorites(username, guestId);
+        if (category != null && !category.isBlank())
+            return bookmarkService.getByCategory(category, username, guestId);
+        if (q == null || q.isBlank())
+            return bookmarkService.getAll(username, guestId);
         return bookmarkService.search(q, username, guestId);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteBookmark(@PathVariable Long id, @RequestParam String guestId){
+    public void deleteBookmark(@PathVariable Long id, @RequestParam String guestId) {
         String username = extractUsername();
-        bookmarkService.deleteBookmark(id, username,guestId);
+        bookmarkService.deleteBookmark(id, username, guestId);
     }
 
     @PatchMapping("/{id}/category")
-    public Bookmark updateCategory(@PathVariable Long id,@Valid @RequestBody BookmarkRequest payload) {
+    public Bookmark updateCategory(@PathVariable Long id, @Valid @RequestBody BookmarkRequest payload) {
         Set<String> newCategories = payload.getCategories();
         String username = extractUsername();
-        return bookmarkService.updateCategory(id, newCategories, username,payload.getGuestId());
+        return bookmarkService.updateCategory(id, newCategories, username, payload.getGuestId());
     }
 
     @PatchMapping("/{id}/favorite")
     public Bookmark toggleFavorite(@PathVariable Long id, @Valid @RequestBody BookmarkRequest payload) {
         String username = extractUsername();
-        return bookmarkService.toggleFavorite(id,username, payload.getGuestId());
+        return bookmarkService.toggleFavorite(id, username, payload.getGuestId());
     }
 
-    private String extractUsername(){
+    private String extractUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() &&
                 !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {

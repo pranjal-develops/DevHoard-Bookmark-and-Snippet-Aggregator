@@ -27,14 +27,20 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-@RequiredArgsConstructor
+// @RequiredArgsConstructor
 public class BookmarkService {
 
     private final BookmarkRepo bookmarkRepo;
     private final UserRepo userRepo;
 
+    public BookmarkService(BookmarkRepo bookmarkRepo, UserRepo userRepo) {
+        this.bookmarkRepo = bookmarkRepo;
+        this.userRepo = userRepo;
+    }
+
     @Async
     public void scrapeAndSave(String url, Set<String> categories, String guestId, String username) {
+        System.out.println("あ! [Scraper] Starting to scrape " + url);
         Document document = null;
         // Use Old Reddit for scraping (it has better metadata for bots)
         String scrapeUrl = url;
@@ -72,17 +78,30 @@ public class BookmarkService {
             }
             if (document == null)
                 throw new Exception("Failed to Scrape");
-            String imgUrl = firstNonEmpty(document, "meta[property=og:image:url]", "meta[property=og:image]",
-                    "meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]");
-
-            if (imgUrl == null || imgUrl.isEmpty()) {
-                document = scrapeWithSelenium(scrapeUrl);
-                imgUrl = firstNonEmpty(document, "meta[property=og:image:url]", "meta[property=og:image]",
-                        "meta[name=twitter:image]", "meta[itemprop=image]", "link[rel=image_src]");
-            }
 
             String title = document.title();
-            String description = firstNonEmpty(document, "meta[name=description]", "meta[property=og:description]");
+            
+            // 🕵️‍♂️ LOUD PREVIEW: Let's see what we actually got!
+            String htmlPreview = document.html().substring(0, Math.min(500, document.html().length()));
+            System.out.println("あ! [Scraper Trace] Title: [" + title + "]");
+            System.out.println("あ! [Scraper Trace] HTML Preview: " + htmlPreview);
+
+            String imgUrl = findImageUrl(document);
+
+            // 🕵️‍♂️ THE FALLBACK RESCUE
+            if (imgUrl == null || imgUrl.isEmpty()) {
+                System.out.println("⚠️ [Scraper] Image missing in initial scrape. Attempting visual render...");
+                document = scrapeWithSelenium(scrapeUrl);
+                imgUrl = findImageUrl(document);
+                title = document.title(); // Refresh title too
+            }
+
+            String description = firstNonEmpty(document, 
+                "meta[name=description]", 
+                "meta[property=og:description]", 
+                "meta[name=twitter:description]",
+                "meta[itemprop=description]");
+            
             Bookmark bookmark = new Bookmark(url, title, description, imgUrl, categories);
 
             if (username != null) {
@@ -149,40 +168,56 @@ public class BookmarkService {
     // }
 
     private static String firstNonEmpty(Document doc, String... cssQueries) {
-        // Stage 1: Check your specific high-quality queries (og:image, etc.)
         for (String q : cssQueries) {
             String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
-            if (isValidImage(v))
-                return v; // ✅ NEW: Use a helper to check quality!
+            if (v != null && !v.isEmpty())
+                return v;
+        }
+        return "";
+    }
+
+    private static String findImageUrl(Document doc) {
+        // Stage 1: Specific high-quality meta tags
+        String[] metaQueries = {
+            "meta[property=og:image:secure_url]", 
+            "meta[property=og:image:url]", 
+            "meta[property=og:image]",
+            "meta[name=twitter:image]", 
+            "meta[itemprop=image]", 
+            "link[rel=image_src]"
+        };
+        
+        for (String q : metaQueries) {
+            String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
+            if (v != null && !v.isEmpty()) return v;
         }
 
-        // Stage 2: The Shotgun meta-scan (Now with a "Hiring" filter!)
+        // Stage 2: The Shotgun meta-scan
         for (org.jsoup.nodes.Element meta : doc.select("meta")) {
             String property = meta.attr("property").toLowerCase();
             String name = meta.attr("name").toLowerCase();
 
-            // 🕵️‍♂️ ONLY look at tags that mention "image" or "thumbnail"
             if (property.contains("image") || name.contains("image") ||
                     property.contains("thumbnail") || name.contains("thumbnail")) {
 
                 String v = meta.attr("abs:content");
-                if (isValidImage(v))
-                    return v;
+                if (isValidImage(v)) return v;
             }
         }
 
         // Stage 3: THE CONTENT SCAN
-        // Loop through images inside the actual question or post body
-        for (org.jsoup.nodes.Element img : doc.select(".s-prose img, #question img, main img")) {
+        for (org.jsoup.nodes.Element img : doc.select(".s-prose img, #question img, main img, article img")) {
             String v = img.attr("abs:src");
-            if (isValidImage(v))
-                return v;
+            if (isValidImage(v)) return v;
         }
 
         // Stage 4: BRANDING FALLBACK
         String loc = doc.location().toLowerCase();
         if (loc.contains("stackoverflow.com")) {
             return "https://cdn.sstatic.net/Sites/stackoverflow/Img/apple-touch-icon@2.png";
+        }
+        if (loc.contains("reddit.com")) {
+            return "https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png";
         }
 
         return "";
@@ -194,7 +229,6 @@ public class BookmarkService {
             return false;
         String lower = url.toLowerCase();
 
-        // THE WALL: If it contains any of these words, it's trash!
         return !(lower.contains("icon") || lower.contains("favicon") ||
                 lower.contains("logo") || lower.contains("76x76") ||
                 lower.contains("px-"));
@@ -256,17 +290,21 @@ public class BookmarkService {
             driver.get(url); // This now returns INSTANTLY because of Strategy.NONE
 
             startTime = System.currentTimeMillis();
-            while (System.currentTimeMillis() - startTime < 10000) { // Max 10 seconds
+            while (System.currentTimeMillis() - startTime < 12000) { // Increased to 12s for heavy SPAs
                 String title = driver.getTitle();
                 String source = driver.getPageSource();
 
-                // 🔱 THE SUCCESS CONDITION: We have the Title and at least some Meta tags
-                if (title != null && !title.isEmpty() && source.contains("<meta")) {
-                    // 🛑 STOP EVERYTHING: Tell the browser to kill all pending ads/scripts
+                // 🔱 THE SUCCESS CONDITION: Title is present and NOT a placeholder
+                if (title != null && !title.isEmpty() && 
+                    !title.toLowerCase().contains("untitled") && 
+                    !title.toLowerCase().contains("loading") &&
+                    source.contains("<meta")) {
+                    
+                    System.out.println("✅ [Selenium] Reliable content detected: " + title);
                     ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("window.stop();");
                     break;
                 }
-                Thread.sleep(500); // Wait a tiny bit and check again
+                Thread.sleep(1000); // Wait 1s between checks
             }
 
             // new WebDriverWait(driver, Duration.ofSeconds(10))
