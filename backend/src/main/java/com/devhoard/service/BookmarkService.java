@@ -1,18 +1,27 @@
-package com.devhoard.service;
+package com.devhoard.service; // Package declaration for service layer organization
 
+// Internal domain models and data access layers
 import com.devhoard.entities.Bookmark;
 import com.devhoard.entities.User;
 import com.devhoard.repository.BookmarkRepo;
 import com.devhoard.repository.UserRepo;
+
+// Lombok for standard boilerplate reduction
 import lombok.RequiredArgsConstructor;
+
+// Jsoup for lightweight, server-side DOM parsing and HTTP connectivity
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+
+// Spring framework components for dependency injection, asynchronous task execution, and security context
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+// Scraping specific imports: Selenium for dynamic content rendering and Jsoup for static parsing
 import org.jsoup.HttpStatusException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -20,51 +29,61 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.PageLoadStrategy;
-import java.time.Duration;
 
+// Standard Java utilities for duration handling and collections
+import java.time.Duration;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Service class responsible for bookmark management and metadata extraction.
+ * Implements a dual-scraping strategy: prioritized Jsoup for speed with a
+ * Selenium fallback for SPAs.
+ */
 @Service
-// @RequiredArgsConstructor
 public class BookmarkService {
 
+    // Final dependency fields to ensure safe concurrency and testability
     private final BookmarkRepo bookmarkRepo;
     private final UserRepo userRepo;
 
+    /**
+     * Constructor-based dependency injection is preferred over @Autowired on
+     * fields.
+     */
     public BookmarkService(BookmarkRepo bookmarkRepo, UserRepo userRepo) {
         this.bookmarkRepo = bookmarkRepo;
         this.userRepo = userRepo;
     }
 
+    /**
+     * Orchestrates the scraping and persistence of a bookmark.
+     * Marked @Async to prevent blocking the main request thread during long-running
+     * browser operations.
+     */
     @Async
     public void scrapeAndSave(String url, Set<String> categories, String guestId, String username) {
-        System.out.println("あ! [Scraper] Starting to scrape " + url);
+        System.out.println("[Scraper] Initiating scrape for: " + url);
         Document document = null;
-        // Use Old Reddit for scraping (it has better metadata for bots)
+
+        // Hostname normalization: reddit.com is notoriously difficult for basic bots;
+        // old.reddit offers better static HTML.
         String scrapeUrl = url;
         if (url.contains("reddit.com") && !url.contains("old.reddit.com")) {
             scrapeUrl = url.replace("www.reddit.com", "old.reddit.com");
         }
 
         try {
-            // Some Sites like StackOverflow will block this as when JSoup makes an HTTP
-            // request to StackOverflow, it sends a secret header identifying itself as
-            // "Java/17.0.x".
-            // StackOverflow's firewall immediately sees that you are a bot, not a human,
-            // and blocks your request with a 403 Forbidden status. Because JSoup crashes on
-            // a 403, your try/catch block catches the crash, throws your custom
-            // RuntimeException, and the entity is never saved.
-            // Document document = Jsoup.connect(url).get();
+            /*
+             * Historical Context:
+             * Initial implementation used standard Jsoup connections. This resulted in 403
+             * Forbidden errors
+             * on major platforms (StackOverflow, YouTube) due to missing Browser-standard
+             * headers.
+             */
 
-            // This will "spoof" your identity so StackOverflow or any other such site
-            // thinks you are a real person using the Google Chrome browser!
-            // Document document = Jsoup.connect(url)
-            // .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
-            // (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            // .referrer("http://www.google.com")
-            // .get();
+            // Phase 1: Fast Static Scrape
             try {
                 document = Jsoup.connect(scrapeUrl)
                         .userAgent(
@@ -74,36 +93,44 @@ public class BookmarkService {
                         .referrer("https://www.google.com")
                         .get();
             } catch (IOException e) {
+                // Secondary Strategy: Selenium failover for JS-heavy or bot-protected sites
+                System.out.println("[Scraper] Fast-scrape failed. Triggering Selenium failover for: " + scrapeUrl);
                 document = scrapeWithSelenium(scrapeUrl);
             }
+
             if (document == null)
-                throw new Exception("Failed to Scrape");
+                throw new Exception("Document resolution failed after all strategies attempted.");
 
             String title = document.title();
-            
-            // 🕵️‍♂️ LOUD PREVIEW: Let's see what we actually got!
-            String htmlPreview = document.html().substring(0, Math.min(500, document.html().length()));
-            System.out.println("あ! [Scraper Trace] Title: [" + title + "]");
-            System.out.println("あ! [Scraper Trace] HTML Preview: " + htmlPreview);
 
+            // Diagnostic logging to verify DOM consistency after extraction
+            String htmlPreview = document.html().substring(0, Math.min(500, document.html().length()));
+            System.out.println("[Scraper Trace] Extracted Title: [" + title + "]");
+            System.out.println("[Scraper Trace] Rendered HTML Fragment: " + htmlPreview);
+
+            // Metadata extraction: Prioritizing Open Graph and Twitter card data
             String imgUrl = findImageUrl(document);
 
-            // 🕵️‍♂️ THE FALLBACK RESCUE
+            // Visual validation: If metadata is missing, the page may require a full
+            // browser render for lazy-loaded assets.
             if (imgUrl == null || imgUrl.isEmpty()) {
-                System.out.println("⚠️ [Scraper] Image missing in initial scrape. Attempting visual render...");
+                System.out.println("[Scraper] High-quality imagery missing. Re-attempting visual render...");
                 document = scrapeWithSelenium(scrapeUrl);
                 imgUrl = findImageUrl(document);
-                title = document.title(); // Refresh title too
+                title = document.title(); // Overwriting any JS-based placeholder title found in phase 1
             }
 
-            String description = firstNonEmpty(document, 
-                "meta[name=description]", 
-                "meta[property=og:description]", 
-                "meta[name=twitter:description]",
-                "meta[itemprop=description]");
-            
+            // Description extraction: Hierarchical search through standard snippet tags
+            String description = firstNonEmpty(document,
+                    "meta[name=description]",
+                    "meta[property=og:description]",
+                    "meta[name=twitter:description]",
+                    "meta[itemprop=description]");
+
+            // Entity instantiation
             Bookmark bookmark = new Bookmark(url, title, description, imgUrl, categories);
 
+            // Context-aware ownership mapping
             if (username != null) {
                 User user = userRepo.findByUsername(username).orElse(null);
                 bookmark.setUser(user);
@@ -111,20 +138,27 @@ public class BookmarkService {
                 bookmark.setGuestId(guestId);
             }
 
-            bookmarkRepo.save(bookmark);
+            bookmarkRepo.save(bookmark); // Final repository persistence
+            System.out.println("[Scraper] Data successfully synchronized for: " + title);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException("An error occurred while saving the entity" + e.getMessage(), e);
+            throw new RuntimeException("Synchronized write failed for URL: " + url + ". Error: " + e.getMessage(), e);
         }
     }
 
+    /**
+     * Standard deletion logic with identity validation.
+     */
     public void deleteBookmark(Long id, String username, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bookmark not found"));
+                .orElseThrow(() -> new RuntimeException("Entity resolution failed for ID: " + id));
         verifyOwnership(bookmark, username, guestId);
         bookmarkRepo.deleteById(id);
     }
 
+    /**
+     * Search implementation delegating to the repository tier.
+     */
     public List<Bookmark> search(String keyword, String username, String guestId) {
         return bookmarkRepo.searchByOwner(username, guestId, keyword);
     }
@@ -137,38 +171,43 @@ public class BookmarkService {
         return bookmarkRepo.findByCategoryAndOwner(username, guestId, category);
     }
 
+    /**
+     * State mutation for categorized tags.
+     */
     public Bookmark updateCategory(Long id, Set<String> categories, String username, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bookmark not found"));
+                .orElseThrow(() -> new RuntimeException("Entity resolution failed for ID: " + id));
         verifyOwnership(bookmark, username, guestId);
         bookmark.setCategories(categories);
         return bookmarkRepo.save(bookmark);
     }
 
+    /**
+     * Toggles the importance flag (Favorite) status.
+     */
     public Bookmark toggleFavorite(Long id, String username, String guestId) {
         Bookmark bookmark = bookmarkRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bookmark not found"));
+                .orElseThrow(() -> new RuntimeException("Entity resolution failed for ID: " + id));
         verifyOwnership(bookmark, username, guestId);
         bookmark.setFavorite(!bookmark.isFavorite());
         return bookmarkRepo.save(bookmark);
     }
 
-    // Add a helper for the controller too
+    /**
+     * Retrieves favorited entities for the specified owner.
+     */
     public List<Bookmark> getFavorites(String username, String guestId) {
         return bookmarkRepo.findFavoritesByOwner(username, guestId);
     }
 
-    // private static String firstNonEmpty(Document doc, String... cssQueries) {
-    // for (String q : cssQueries) {
-    // String v = doc.select(q).attr(q.contains("meta") ? "abs:content" :
-    // "abs:href");
-    // if (v != null && !v.isEmpty()) return v;
-    // }
-    // return "";
-    // }
-
+    /**
+     * Utility method to extract the first available attribute from a list of CSS
+     * selectors.
+     */
     private static String firstNonEmpty(Document doc, String... cssQueries) {
         for (String q : cssQueries) {
+            // Absolute attribute extraction to resolve relative paths to fully-qualified
+            // URLs
             String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
             if (v != null && !v.isEmpty())
                 return v;
@@ -176,23 +215,28 @@ public class BookmarkService {
         return "";
     }
 
+    /**
+     * Advanced image discovery algorithm utilizing structural and metadata
+     * heuristics.
+     */
     private static String findImageUrl(Document doc) {
-        // Stage 1: Specific high-quality meta tags
+        // Strategy 1: Targeted Meta extraction (Standardized Social tags)
         String[] metaQueries = {
-            "meta[property=og:image:secure_url]", 
-            "meta[property=og:image:url]", 
-            "meta[property=og:image]",
-            "meta[name=twitter:image]", 
-            "meta[itemprop=image]", 
-            "link[rel=image_src]"
+                "meta[property=og:image:secure_url]",
+                "meta[property=og:image:url]",
+                "meta[property=og:image]",
+                "meta[name=twitter:image]",
+                "meta[itemprop=image]",
+                "link[rel=image_src]"
         };
-        
+
         for (String q : metaQueries) {
             String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
-            if (v != null && !v.isEmpty()) return v;
+            if (v != null && !v.isEmpty())
+                return v;
         }
 
-        // Stage 2: The Shotgun meta-scan
+        // Strategy 2: Exhaustive Meta scan for common image keywords
         for (org.jsoup.nodes.Element meta : doc.select("meta")) {
             String property = meta.attr("property").toLowerCase();
             String name = meta.attr("name").toLowerCase();
@@ -201,17 +245,19 @@ public class BookmarkService {
                     property.contains("thumbnail") || name.contains("thumbnail")) {
 
                 String v = meta.attr("abs:content");
-                if (isValidImage(v)) return v;
+                if (isValidImage(v))
+                    return v;
             }
         }
 
-        // Stage 3: THE CONTENT SCAN
+        // Strategy 3: Structural DOM discovery targeting primary content containers
         for (org.jsoup.nodes.Element img : doc.select(".s-prose img, #question img, main img, article img")) {
             String v = img.attr("abs:src");
-            if (isValidImage(v)) return v;
+            if (isValidImage(v))
+                return v;
         }
 
-        // Stage 4: BRANDING FALLBACK
+        // Strategy 4: Hardcoded branding fallbacks for legacy or high-protection sites
         String loc = doc.location().toLowerCase();
         if (loc.contains("stackoverflow.com")) {
             return "https://cdn.sstatic.net/Sites/stackoverflow/Img/apple-touch-icon@2.png";
@@ -223,59 +269,57 @@ public class BookmarkService {
         return "";
     }
 
-    // THE QUALITY GUARD:
+    /**
+     * Validates image quality to avoid UI elements and small favicons.
+     */
     private static boolean isValidImage(String url) {
         if (url == null || url.isEmpty())
             return false;
         String lower = url.toLowerCase();
 
+        // Heuristic filtering: Exclusion of common UI asset keywords
         return !(lower.contains("icon") || lower.contains("favicon") ||
                 lower.contains("logo") || lower.contains("76x76") ||
                 lower.contains("px-"));
     }
 
+    /**
+     * Full-browser scraping implementation using headless Chromium.
+     * Necessary for sites requiring JS execution to populate the DOM with metadata.
+     */
     private Document scrapeWithSelenium(String url) {
-        long startTime = System.currentTimeMillis(); // Start the stopwatch
+        long startTime = System.currentTimeMillis();
 
+        // Local environment driver resolution
         System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
 
-        // 1. Setup the invisible Chrome driver
+        // Browser instance configuration
         ChromeOptions options = new ChromeOptions();
         options.setBinary("/usr/bin/chromium-browser");
-        options.addArguments("--headless=new"); // Runs without a window & Use the 'new' headless engine
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-blink-features=AutomationControlled"); // Hides the "I am a robot" flag
-        options.addArguments("--window-size=1920,1080"); // Pretend we have a big monitor
-        // THE FAKE ID: This tricks Cloudflare into thinking you are a regular person on
-        // a desktop.
+        options.addArguments("--headless=new"); // Modern headless engine execution
+        options.addArguments("--disable-dev-shm-usage"); // Mitigate Docker shared memory exhaustion
+        options.addArguments("--no-sandbox"); // Required for Alpine/Docker root execution
+        options.addArguments("--disable-blink-features=AutomationControlled"); // Masking automation detection
+        options.addArguments("--window-size=1920,1080");
+
+        // Stealth profile: Mimicking a high-entropy desktop user agent
         options.addArguments(
                 "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-        options.setExperimentalOption("excludeSwitches", java.util.Collections.singletonList("enable-automation")); // Turns
-                                                                                                                    // off
-                                                                                                                    // the
-                                                                                                                    // "Chrome
-                                                                                                                    // is
-                                                                                                                    // being
-                                                                                                                    // controlled"
-                                                                                                                    // banner
+
+        options.setExperimentalOption("excludeSwitches", java.util.Collections.singletonList("enable-automation"));
         options.setExperimentalOption("useAutomationExtension", false);
+
         options.addArguments("--disable-gpu");
-        options.addArguments("--no-sandbox");
         options.addArguments("--blink-settings=imagesEnabled=true");
         options.addArguments("--incognito");
-        // Stop ads and tracking scripts from stealing your CPU/Time
         options.addArguments("--disable-extensions");
-        options.addArguments("--disable-gpu");
-        options.addArguments("--no-sandbox");
 
-        // ⚡ THE EAGER STRATEGY: Stop waiting once the basic HTML is loaded!
-        // options.setPageLoadStrategy(PageLoadStrategy.EAGER);
+        // Strategy refinement: Immediate control return to avoid waiting for
+        // non-essential assets
         options.setPageLoadStrategy(PageLoadStrategy.NONE);
 
         WebDriver driver = new ChromeDriver(options);
         try {
-            // 2. Visit the site and wait for Cloudflare
             driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(20));
             driver.get(url);
 
@@ -290,21 +334,28 @@ public class BookmarkService {
             driver.get(url); // This now returns INSTANTLY because of Strategy.NONE
 
             startTime = System.currentTimeMillis();
-            while (System.currentTimeMillis() - startTime < 12000) { // Increased to 12s for heavy SPAs
+
+            // Resource Monitor: Custom wait loop to stop execution as soon as 'real'
+            // content is identified
+            while (System.currentTimeMillis() - startTime < 12000) {
                 String title = driver.getTitle();
                 String source = driver.getPageSource();
 
-                // 🔱 THE SUCCESS CONDITION: Title is present and NOT a placeholder
-                if (title != null && !title.isEmpty() && 
-                    !title.toLowerCase().contains("untitled") && 
-                    !title.toLowerCase().contains("loading") &&
-                    source.contains("<meta")) {
-                    
-                    System.out.println("✅ [Selenium] Reliable content detected: " + title);
+                /*
+                 * Content Stability Detection:
+                 * Stop once the title is meaningful and metadata tags have been injected by the
+                 * JS engine.
+                 */
+                if (title != null && !title.isEmpty() &&
+                        !title.toLowerCase().contains("untitled") &&
+                        !title.toLowerCase().contains("loading") &&
+                        source.contains("<meta")) {
+
+                    System.out.println("[Selenium] Content stability reached for: " + title);
                     ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("window.stop();");
                     break;
                 }
-                Thread.sleep(1000); // Wait 1s between checks
+                Thread.sleep(1000); // Polling frequency set to 1Hz
             }
 
             // new WebDriverWait(driver, Duration.ofSeconds(10))
@@ -315,30 +366,29 @@ public class BookmarkService {
             } catch (InterruptedException ignored) {
             }
 
-            // 3. Extract the final rendered HTML and convert it back to a JSoup Document
             String html = driver.getPageSource();
             return Jsoup.parse(html, url);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Async interruption during Selenium operation: " + e.getMessage(), e);
         } finally {
-            // 4. CRITICAL: Always close the browser or your RAM will fill up!
+            // JVM Resource cleanup: Chromium processes must be terminated to prevent memory
+            // leakage
             driver.quit();
-            long duration = System.currentTimeMillis() - startTime; // 🏁 Calculate
-            System.out.println("あ! [Scraper] Successfully saved " + url + " in " + duration + "ms");
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("[Scraper] Lifecycle completed in " + duration + "ms for: " + url);
         }
     }
 
+    /**
+     * Perimeter security check for entity ownership.
+     */
     private void verifyOwnership(Bookmark bookmark, String username, String guestId) {
-        // 1. If it belongs to a User, the name must match
         if (bookmark.getUser() != null) {
             if (username == null || !bookmark.getUser().getUsername().equals(username)) {
-                throw new RuntimeException("Access Denied: Not your archive!");
+                throw new RuntimeException("Access Denied: Resource ownership mismatch.");
             }
-        }
-        // 2. If it's a Guest bookmark, the guestId must match
-        else if (bookmark.getGuestId() == null || !bookmark.getGuestId().equals(guestId)) {
-            throw new RuntimeException("Access Denied: Identity mismatch!");
+        } else if (bookmark.getGuestId() == null || !bookmark.getGuestId().equals(guestId)) {
+            throw new RuntimeException("Access Denied: Identity token mismatch.");
         }
     }
-
 }
