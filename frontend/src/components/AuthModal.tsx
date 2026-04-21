@@ -1,105 +1,62 @@
-import React, { useState } from 'react'; // React primitives for local state and event handling
-import { useDispatch, useSelector } from 'react-redux'; // Redux hooks for state access and action dispatching
-import { type RootState } from '../store'; // Global state type for selector orchestration
-import { closeAuth, openAuth } from '../store/slices/uiSlice'; // UI controls for modal visibility
-import { setAuth } from '../store/slices/authSlice'; // Authentication action for session persistence
-import api from '../api/api'; // Centralized Axios instance for authenticated HTTP requests
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { type RootState } from '../store';
+import { closeAuth, openAuth } from '../store/slices/uiSlice';
+import { setAuth } from '../store/slices/authSlice';
+import api from '../api/api';
 
-/**
- * Authentication Modal Component.
- * Facilitates both 'Login' and 'Registration' workflows within a unified overlay.
- * Orchestrates identity-token retrieval and optional guest identity consolidation.
- */
 const AuthModal = () => {
     const dispatch = useDispatch();
-
-    // UI state extraction: managing modal visibility and the active sub-mode (login/register)
     const { isAuthOpen, authMode } = useSelector((state: RootState) => state.ui);
 
-    // Local form state for credential inputs and feedback loops
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    /* Lifecycle Check: Early return if the modal state is inactive */
     if (!isAuthOpen) return null;
 
-    /**
-     * Primary Authentication Handler.
-     * Executes the network request for either login or registration based on current 'authMode'.
-     */
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
 
-        // Retrieval of current local identity context for backend consolidation
         const guestId = localStorage.getItem('guestId');
-
-        // Resolution of the target endpoint based on the active modal tab
         const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
 
         try {
-            /**
-             * Backend Execution:
-             * Passing credentials alongside the 'guestId'. 
-             * The 'guestId' acts as a consolidation signal, informing the backend to migrate 
-             * orphaned bookmarks to the new/existing authenticated account.
-             */
-            const res = await api.post(endpoint, {
-                username,
-                password,
-                guestId
-            });
+            const res = await api.post(endpoint, { username, password, guestId });
 
             if (authMode === 'login') {
-                // Success Path (Login): Hydrating the global auth slice and terminating the modal lifecycle
                 dispatch(setAuth({
                     token: res.data.token,
                     user: res.data.username
                 }));
                 dispatch(closeAuth());
             } else {
-                /** 
-                 * Success Path (Registration): 
-                 * Redirecting the user to the Login view to complete the JWT handshake.
-                 */
                 dispatch(openAuth('login'));
-                setError('Account successfully provisioned. Please enter your credentials to proceed.');
+                setError('Account created. Please login.');
             }
         } catch (err: any) {
-            // Failure Path: Abstracting raw network errors into user-friendly diagnostic messages
-            setError(err.response?.data?.message || 'Authentication lifecycle failed. Please verify your credentials.');
+            setError(err.response?.data?.message || 'Authentication failed.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        /* Multi-layered backdrop with blur-effect for a premium interface depth */
         <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/25 backdrop-blur-2xl transition-all duration-300" style={{ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }} >
-
             <div className="relative w-full max-w-md scale-100 transform overflow-hidden rounded-2xl p-8 transition-all duration-300
                     bg-white border border-zinc-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] 
                     dark:bg-black dark:border-white/10 dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] dark:shadow-lime-500/5">
 
-                {/* /**
-                 * Legacy UI Analysis:
-                 * Commented code below indicates a planned transition to 'Heroicons' for a cleaner visual language.
-                 * // import { XMarkIcon } from '@heroicons/react/24/outline';
-                 * 
-                 * Current Implementation:
-                 * Utilizing a standard 'X' character as a lightweight fallback until dependency resolution is finalized.
-                 */}
                 <button
                     onClick={() => dispatch(closeAuth())}
                     className="absolute right-4 top-4 text-zinc-500 hover:text-white transition-colors"
                 >
-                    X   {/* <XMarkIcon className="h-6 w-6" /> <span className="text-2xl">X</span> */}
+                    X
                 </button>
 
-                {/* Navigation Header: Orchestrates switching between Login and Registration contexts */}
                 <div className="mb-8 flex justify-center space-x-4 border-b border-white/5 pb-4">
                     <button
                         onClick={() => dispatch(openAuth('login'))}
@@ -122,7 +79,6 @@ const AuthModal = () => {
                 </div>
 
                 <form onSubmit={handleAuth} className="space-y-6">
-                    {/* Credential Ingestion Points */}
                     <div>
                         <label className="mb-2 block text-sm font-medium text-zinc-400">Username</label>
                         <input
@@ -151,9 +107,8 @@ const AuthModal = () => {
                         />
                     </div>
 
-                    {/* Feedback Layer: Displays errors or success notifications directly within the form flow */}
                     {error && (
-                        <p className={`text-center text-sm ${error.includes('Success') || error.includes('created') || error.includes('successfully') ? 'text-lime-500' : 'text-red-400'}`}>
+                        <p className={`text-center text-sm ${error.includes('created') || error.includes('success') ? 'text-lime-500' : 'text-red-400'}`}>
                             {error}
                         </p>
                     )}
@@ -181,4 +136,5 @@ const AuthModal = () => {
 };
 
 export default AuthModal;
+
 

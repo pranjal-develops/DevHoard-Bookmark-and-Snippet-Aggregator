@@ -1,19 +1,10 @@
-import React from 'react' // React primitives for functional component definition
+import React from 'react'
 
-/**
- * Interface for the Tag component properties.
- * Defines the behavioral and data requirements for individual tag representations.
- */
 interface tagProps {
-    name: string; // The text content/label of the tag
-    onClick: (e: React.MouseEvent) => void; // Click event handler for navigation or selection
+    name: string;
+    onClick: (e: React.MouseEvent) => void;
 }
 
-/**
- * Reusable Tag Component.
- * Implements the 'Cyber-Minimalist' visual language with high contrast and mono-typography.
- * Designed for micro-interactions within metadata-heavy contexts (e.g. Card, Sidebar).
- */
 const Tag: React.FC<tagProps> = ({ name, onClick }) => {
     return (
         <button 
@@ -26,4 +17,5 @@ const Tag: React.FC<tagProps> = ({ name, onClick }) => {
     )
 }
 
-export default Tag
+export default Tag
+

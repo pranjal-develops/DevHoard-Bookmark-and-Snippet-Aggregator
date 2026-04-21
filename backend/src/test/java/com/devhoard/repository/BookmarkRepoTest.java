@@ -62,7 +62,8 @@ public class BookmarkRepoTest {
         entityManager.persist(b1);
 
         // Bookmark 2: Linked to a session ID
-        Bookmark b2 = new Bookmark("http://guest.com", "Guest Link", "Desc", null,"session_123", Set.of("news"));
+        Bookmark b2 = new Bookmark("http://guest.com", "Guest Link", "Desc", null, Set.of("news"));
+        b2.setGuestId("session_123");
         entityManager.persist(b2);
 
         entityManager.flush();
