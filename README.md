@@ -1,69 +1,65 @@
 # 🚀 DevHoard
 **The Smart Bookmark & Snippet Aggregator for Developers**
 
-DevHoard is a full-stack web application designed for developers to instantly save, search, and manage technical articles and documentation. It features an automated backend web-scraping engine that dynamically extracts metadata from any saved URL.
+DevHoard is a high-performance, full-stack web archival system designed for developers. It allows users to instantly save, search, and manage technical resources with an automated hybrid scraping engine that extracts metadata, images, and descriptions in real-time.
 
+---
+
+## 🎨 Design Aesthetic: "Cyber-Minimalist"
+DevHoard features a custom-built, premium UI designed for high-focus development environments:
+- **Dark Mode First**: High-contrast, easy-on-the-eyes "Enter Cyber" mode.
+- **Glassmorphism**: Backdrop blurs and subtle glows for depth and focus.
+- **Micro-Animations**: Real-time feedback for archival operations (Toasts, Pulsing states).
 
 ---
 
 ## 💻 Tech Stack
-*   **Backend Server:** Java 25, Spring Boot 3
-*   **Database & ORM:** PostgreSQL, Spring Data JPA, Hibernate
-*   **Data Extraction:** JSoup (HTML Parser)
-*   **Frontend Client:** React 19, TypeScript, Tailwind CSS v4, Vite, Axios
-*   **Architecture:** RESTful API -> Single Page Application (SPA)
+- **Backend (API)**: Java 21, Spring Boot 4.0.4, Spring Data JPA, Spring Security (JWT).
+- **Data Extraction**: Hybrid Engine (Jsoup + Selenium WebDriver) to handle both static HTML and JS-heavy/Cloudflare-protected sites.
+- **Database**: PostgreSQL 15.
+- **Frontend (SPA)**: React 19, TypeScript, Redux Toolkit, Tailwind CSS v4, Vite.
+- **Infrastructure**: Docker & Docker Compose.
 
 ---
 
 ## ⚙️ Core Architectural Highlights
 
-### 1. Automated Metadata Extraction (Web Scraping)
-Instead of forcing users to manually type titles and find images for their bookmarks, the Spring Boot backend uses **JSoup** to automatically fetch and parse the target URL's DOM. 
-*   **Anti-Bot Spoofing:** To bypass basic anti-bot firewalls on strict websites, the scraping engine dynamically injects custom `User-Agent` and `Accept-Language` HTTP headers to successfully mimic a human using Google Chrome.
+### 1. Hybrid Scraping Strategy
+DevHoard uses a two-stage archival pipeline:
+1. **Jsoup (L1)**: Ultra-fast static parsing for documented sources.
+2. **Selenium (L2)**: Fallback headless browser execution for dynamic content and anti-bot bypass.
 
-### 2. Spring Data JPA Dynamic Query Generation
-The core search functionality is built using JPA's derived query methods (`findByTitleContainingIgnoreCase`). This allows the backend engine to perform real-time, case-insensitive `LIKE %query%` SQL filtering without requiring manually written SQL statements, ensuring clean and maintainable repository code.
+### 2. Stateless JWT Authentication
+Implemented a robust authentication layer using JSON Web Tokens. Security is managed via a custom `JwtAuthenticationFilter` ensuring zero server-side session overhead and high scalability.
 
-### 3. Modern React Componentization
-The frontend UI is strictly componentized with dedicated TypeScript interfaces (`UrlFormProps`, `SearchProps`, etc.) to guarantee end-to-end type safety between the Tailwind layout and the Axios network payloads.
+### 3. Guest-to-User Identity Consolidation
+Features a "Try before you buy" mode. Guest users can archive bookmarks using a local session ID; upon registration or login, the system automatically migrates all guest-session records to the new authenticated account.
 
 ---
 
 ## 🛠️ Local Setup Guide
 
 ### Prerequisites
-*   Java JDK 25+
-*   Node.js 20+
-*   PostgreSQL installed and running locally
+- Docker & Docker Compose
+- Node.js (for local frontend development, optional)
 
-### 1. Database Configuration
-Create a new, empty database in PostgreSQL named `devhoard`. 
-Update the credentials in `backend/src/main/resources/application.yaml`:
-```yaml
-datasource:
-  url: jdbc:postgresql://localhost:5432/devhoard
-  username: YOUR_USERNAME_HERE
-  password: ${DB_PASSWORD:password}
-```
+### 🚀 Running the Full Stack
+The easiest way to start DevHoard is via Docker Compose. This starts the Database, API, and UI simultaneously:
 
-### 2. Run the Spring Boot API
-Navigate to the backend folder and start the server. It will automatically build the SQL tables (Auto-DDL) and run on Port 8080:
+1. **Clone the repository.**
+2. **Create a `.env` file** in the root directory (copy from `.env.example` if available).
+3. **Run the stack:**
 ```bash
-cd backend
-./mvnw spring-boot:run
+docker-compose up --build
 ```
-
-### 3. Run the React Dashboard
-Open a new terminal, navigate to the frontend folder, and start the Vite dev server:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Navigate to `http://localhost:5173` in your browser.
+- **Frontend**: `http://localhost:80` (or `http://localhost:5173` in dev mode)
+- **Backend API**: `http://localhost:8080`
 
 ---
 
 ## 🔮 Future Roadmap
-*   **Cloudflare Bypass:** Upgrade the JSoup HTML parser to an automated Headless Browser (Selenium WebDriver) to execute JavaScript challenges and scrape sites protected by Cloudflare.
-*   **Authentication:** Implement Spring Security with JSON Web Tokens (JWT) to support multi-user accounts and private bookmark hoards.
+- **AI-Powered Tagging**: Automatically categorize links using LLM integration (Gemini/ChatGPT).
+- **Content Diffing**: Periodically monitor archived pages and notify users of content changes.
+- **Distributed Fleet**: Move the scraping logic to a separate microservice with a message broker (RabbitMQ/Kafka).
+
+---
