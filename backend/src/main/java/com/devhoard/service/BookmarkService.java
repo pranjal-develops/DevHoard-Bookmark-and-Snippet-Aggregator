@@ -40,7 +40,8 @@ public class BookmarkService {
             try {
                 // Initial Jsoup attempt
                 document = Jsoup.connect(scrapeUrl)
-                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .userAgent(
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                         .header("Accept-Language", "en-US,en;q=0.9")
                         .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
                         .referrer("https://www.google.com")
@@ -50,7 +51,8 @@ public class BookmarkService {
                 document = scrapeWithSelenium(scrapeUrl);
             }
 
-            if (document == null) throw new Exception("Failed to resolve document");
+            if (document == null)
+                throw new Exception("Failed to resolve document");
 
             String title = document.title();
             String imgUrl = findImageUrl(document);
@@ -124,7 +126,8 @@ public class BookmarkService {
     private static String firstNonEmpty(Document doc, String... cssQueries) {
         for (String q : cssQueries) {
             String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
-            if (v != null && !v.isEmpty()) return v;
+            if (v != null && !v.isEmpty())
+                return v;
         }
         return "";
     }
@@ -138,23 +141,28 @@ public class BookmarkService {
 
         for (String q : metaQueries) {
             String v = doc.select(q).attr(q.contains("meta") ? "abs:content" : "abs:href");
-            if (v != null && !v.isEmpty()) return v;
+            if (v != null && !v.isEmpty())
+                return v;
         }
 
         for (org.jsoup.nodes.Element img : doc.select(".s-prose img, #question img, main img, article img")) {
             String v = img.attr("abs:src");
-            if (isValidImage(v)) return v;
+            if (isValidImage(v))
+                return v;
         }
 
         String loc = doc.location().toLowerCase();
-        if (loc.contains("stackoverflow.com")) return "https://cdn.sstatic.net/Sites/stackoverflow/Img/apple-touch-icon@2.png";
-        if (loc.contains("reddit.com")) return "https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png";
+        if (loc.contains("stackoverflow.com"))
+            return "https://cdn.sstatic.net/Sites/stackoverflow/Img/apple-touch-icon@2.png";
+        if (loc.contains("reddit.com"))
+            return "https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png";
 
         return "";
     }
 
     private static boolean isValidImage(String url) {
-        if (url == null || url.isEmpty()) return false;
+        if (url == null || url.isEmpty())
+            return false;
         String lower = url.toLowerCase();
         return !(lower.contains("icon") || lower.contains("favicon") ||
                 lower.contains("logo") || lower.contains("76x76") || lower.contains("px-"));
@@ -167,9 +175,17 @@ public class BookmarkService {
         options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--headless=new", "--disable-dev-shm-usage", "--no-sandbox", "--disable-gpu");
         options.addArguments("--disable-blink-features=AutomationControlled", "--window-size=1920,1080", "--incognito");
-        options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        options.addArguments(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        options.addArguments("--single-process");
+        options.addArguments("--disable-extensions");
+        options.addArguments("--blink-settings=imagesEnable=false");
         options.setExperimentalOption("excludeSwitches", List.of("enable-automation"));
         options.setPageLoadStrategy(PageLoadStrategy.NONE);
+
+        java.util.Map<String, Object> prefs = new java.util.HashMap<>();
+        prefs.put("profile.managed_default_content_settings.images", 2);
+        options.setExperimentalOption("prefs", prefs);
 
         WebDriver driver = new ChromeDriver(options);
         try {
@@ -180,9 +196,9 @@ public class BookmarkService {
                 String title = driver.getTitle();
                 String source = driver.getPageSource();
 
-                if (title != null && !title.isEmpty() && 
-                    !title.toLowerCase().contains("loading") && 
-                    source.contains("<meta")) {
+                if (title != null && !title.isEmpty() &&
+                        !title.toLowerCase().contains("loading") &&
+                        source.contains("<meta")) {
                     break;
                 }
                 Thread.sleep(1000);
@@ -206,5 +222,3 @@ public class BookmarkService {
         }
     }
 }
-
-
