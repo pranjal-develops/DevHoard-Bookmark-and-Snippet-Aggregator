@@ -34,6 +34,8 @@ public class BookmarkService {
         Document document = null;
         String scrapeUrl = url;
 
+        boolean isYouTube = url.contains("youtube.com") || url.contains("youtu.be");
+
         if (url.contains("reddit.com") && !url.contains("old.reddit.com")) {
             scrapeUrl = url.replace("www.reddit.com", "old.reddit.com");
         }
@@ -49,8 +51,12 @@ public class BookmarkService {
                         .referrer("https://www.google.com")
                         .get();
             } catch (IOException e) {
-                // Selenium fallback
-                document = scrapeWithSelenium(scrapeUrl);
+                if (!isYouTube) {
+                    // Selenium fallback
+                    document = scrapeWithSelenium(scrapeUrl);
+                } else {
+                    throw new Exception("Youtube metadata could not be fetched via Jsoup");
+                }
             }
 
             if (document == null)
