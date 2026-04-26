@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Set;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/bookmarks")
@@ -31,15 +33,18 @@ public class BookmarkController {
 
     @GetMapping
     public List<Bookmark> getBookmarks(@RequestParam(required = false) String q,
-                                     @RequestParam(required = false) String category,
-                                     @RequestParam(defaultValue = "false") boolean favoritesOnly, 
-                                     @RequestParam String guestId) {
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "false") boolean favoritesOnly,
+            @RequestParam String guestId) {
         String username = extractUsername();
-        
-        if (favoritesOnly) return bookmarkService.getFavorites(username, guestId);
-        if (category != null && !category.isBlank()) return bookmarkService.getByCategory(category, username, guestId);
-        if (q == null || q.isBlank()) return bookmarkService.getAll(username, guestId);
-        
+
+        if (favoritesOnly)
+            return bookmarkService.getFavorites(username, guestId);
+        if (category != null && !category.isBlank())
+            return bookmarkService.getByCategory(category, username, guestId);
+        if (q == null || q.isBlank())
+            return bookmarkService.getAll(username, guestId);
+
         return bookmarkService.search(q, username, guestId);
     }
 
@@ -73,6 +78,10 @@ public class BookmarkController {
         }
         return null;
     }
+
+    @PostMapping("/migrate-guest")
+    public void migrateGuest(@RequestParam String from, @RequestParam String to) {
+        bookmarkService.migrateGuestBookmarks(from, to);
+    }
+
 }
-
-

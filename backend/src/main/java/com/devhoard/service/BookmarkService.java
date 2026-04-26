@@ -4,6 +4,8 @@ import com.devhoard.entities.Bookmark;
 import com.devhoard.entities.User;
 import com.devhoard.repository.BookmarkRepo;
 import com.devhoard.repository.UserRepo;
+
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -220,5 +222,14 @@ public class BookmarkService {
         } else if (bookmark.getGuestId() == null || !bookmark.getGuestId().equals(guestId)) {
             throw new RuntimeException("Unauthorized");
         }
+    }
+
+    @Transactional
+    public void migrateGuestBookmarks(String oldId, String newId) {
+        List<Bookmark> bookmarks = bookmarkRepo.findByGuestId(oldId);
+        for (Bookmark b : bookmarks) {
+            b.setGuestId(newId);
+        }
+        bookmarkRepo.saveAll(bookmarks);
     }
 }
