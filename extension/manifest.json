@@ -1,0 +1,34 @@
+{
+    "manifest_version": 3,
+    "name": "DevHoard Archiver",
+    "version": "1.0",
+    "description": "Archive any page to your DevHoard library.",
+    "permissions": [
+        "tabs",
+        "storage"
+    ],
+    "host_permissions": [
+        "https://devhoard-api.onrender.com/*",
+        "https://devhoard-app.onrender.com/*",
+        "https://devhoard-frontend.netlify.app/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "https://devhoard-app.onrender.com/*",
+                "https://devhoard-frontend.netlify.app/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "archiver@devhoard.com"
+        }
+    }
+}

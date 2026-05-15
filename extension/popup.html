@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Devhoard Archiver</h1>
+
+        <!-- LOGIN SECTION (Hidden by default) -->
+        <div id="login-section" class="hidden">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Login</button>
+            <p id="login-error" class="error hidden"></p>
+        </div>
+
+        <!-- ARCHIVE SECTION (Hidden by default) -->
+        <div id="save-section" class="hidden">
+            <input type="text" id="tags" placeholder="Enter tags (comma separated)...">
+            <button id="save-btn">Archive Page</button>
+            <p id="login-hint" class="hint hidden">
+                Want to sync devices? <a href="#" id="go-to-login">Login here</a>
+            </p>
+            <button id="logout-btn" class="secondary-btn hidden">Logout</button>
+        </div>
+
+        <div id="status" class="hidden"></div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+
+
+</html>
